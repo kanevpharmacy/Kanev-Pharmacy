@@ -462,14 +462,6 @@ export default function App() {
     if (!supabaseConfigured) { setAuthInitialized(true); return; }
 
     let active = true;
-    // Do not leave the app trapped on the startup screen if session restoration or
-    // the admin-role lookup stalls because of a slow/unavailable network.
-    const startupTimeout = setTimeout(() => {
-      if (active) {
-        setTab('Home');
-        setAuthInitialized(true);
-      }
-    }, 10000);
     // Resolve the saved session and its admin role before rendering the storefront.
     // This prevents the customer home page flashing briefly when an admin refreshes.
     (async () => {
@@ -497,7 +489,6 @@ export default function App() {
       } catch (_) {
         if (active) setTab('Home');
       } finally {
-        clearTimeout(startupTimeout);
         if (active) setAuthInitialized(true);
       }
     })();
@@ -510,7 +501,7 @@ export default function App() {
         setTab(current => current === 'Management' ? 'Home' : current);
       }
     });
-    return () => { active = false; clearTimeout(startupTimeout); listener.subscription.unsubscribe(); };
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, [loadCatalogue]);
 
   const loadOrders = useCallback(async () => {
