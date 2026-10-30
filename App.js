@@ -1040,7 +1040,7 @@ export default function App() {
       </Pressable>
       {isDesktop ? (
         <View style={styles.desktopHeaderTools}>
-          <Pressable style={styles.desktopDelivery} onPress={() => { setDeliverySearch(deliveryLocation.label === 'Zambia' ? '' : deliveryLocation.label); setDeliveryModalVisible(true); }}>
+          <Pressable style={styles.desktopDelivery} onPress={() => { if (!requireCustomerLogin()) return; setDeliverySearch(deliveryLocation.label === 'Zambia' ? '' : deliveryLocation.label); setDeliveryModalVisible(true); }}>
             <Ionicons name="location-outline" size={19} color={COLORS.blue} />
             <View style={{ maxWidth: 125 }}><Text style={styles.desktopDeliveryLabel}>Deliver to</Text><Text numberOfLines={1} style={styles.desktopDeliveryValue}>{deliveryLocation.label || 'Choose location'}</Text></View>
             <Ionicons name="chevron-down" size={15} color={COLORS.muted} />
@@ -1069,7 +1069,7 @@ export default function App() {
             <Ionicons name="cart-outline" size={23} color={COLORS.green}/>
             {cartCount > 0 && <View style={styles.cartDot}><Text style={styles.cartDotText}>{cartCount}</Text></View>}
           </Pressable>
-          <Pressable onPress={()=>setMobileHeaderMenuOpen(v=>!v)} style={{width:39,height:40,borderRadius:11,alignItems:'center',justifyContent:'center',backgroundColor:'#F0F7F2'}} accessibilityRole="button" accessibilityLabel="Open menu">
+          <Pressable onPress={()=>{if(!requireCustomerLogin())return;setMobileHeaderMenuOpen(v=>!v);}} style={{width:39,height:40,borderRadius:11,alignItems:'center',justifyContent:'center',backgroundColor:'#F0F7F2'}} accessibilityRole="button" accessibilityLabel="Open menu">
             <Ionicons name={mobileHeaderMenuOpen?'close':'ellipsis-vertical'} size={23} color={COLORS.green}/>
           </Pressable>
           {mobileHeaderMenuOpen && <View style={{position:'absolute',right:0,top:47,width:205,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:COLORS.border,borderRadius:13,padding:7,zIndex:3000,elevation:24,shadowColor:'#17382B',shadowOpacity:.18,shadowRadius:14,shadowOffset:{width:0,height:7},gap:2}}>
@@ -1077,7 +1077,7 @@ export default function App() {
               {label:'Home',icon:'home-outline',action:()=>{setTab('Home');setSelectedProduct(null);}},
               {label:'Shop products',icon:'grid-outline',action:()=>openStoreShop('All')},
               {label:session?.user?'My account':'Sign in',icon:'person-outline',action:()=>{if(session?.user)setTab('Account');else{setAuthMode('signin');setAuthModalVisible(true);}}},
-              {label:'Delivery location',icon:'location-outline',action:()=>{setDeliverySearch(deliveryLocation.label==='Zambia'?'':deliveryLocation.label);setDeliveryModalVisible(true);}},
+              {label:'Delivery location',icon:'location-outline',action:()=>{if(!requireCustomerLogin())return;setDeliverySearch(deliveryLocation.label==='Zambia'?'':deliveryLocation.label);setDeliveryModalVisible(true);}},
             ].map(item=><Pressable key={item.label} onPress={()=>{setMobileHeaderMenuOpen(false);item.action();}} style={{minHeight:43,paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:10,borderRadius:8}}>
               <Ionicons name={item.icon} size={18} color={COLORS.green}/><Text style={{fontSize:13,fontWeight:'700',color:COLORS.ink}}>{item.label}</Text>
             </Pressable>)}
