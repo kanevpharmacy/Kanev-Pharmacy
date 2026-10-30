@@ -180,6 +180,7 @@ export default function App() {
   const [tab, setTab] = useState('Home');
   const [query, setQuery] = useState('');
   const [headerSearchFocused, setHeaderSearchFocused] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [mobileHeaderMenuOpen, setMobileHeaderMenuOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [deliveryModalVisible, setDeliveryModalVisible] = useState(false);
@@ -346,13 +347,35 @@ export default function App() {
     placeholderSlide.setValue(12);
     Animated.timing(placeholderSlide, { toValue: 0, duration: 260, useNativeDriver: true }).start();
   }, [placeholderIndex, query, placeholderSlide]);
+  // Keep typing immediate. Only update the catalogue filter after a short pause,
+  // so large product lists never make the TextInput feel blocked on mobile.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(query.trim()), 140);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Build the searchable text once per catalogue refresh rather than converting
+  // every product field to lowercase on every keypress.
+  const searchableProducts = useMemo(() => products.map(product => ({
+    product,
+    searchText: [
+      product.name, product.brand, product.category, product.subcategory,
+      product.summary, product.description, product.slug, product.sku, product.barcode
+    ].map(value => String(value || '').toLocaleLowerCase()).join(' ')
+  })), [products]);
+
   const headerSearchMatches = useMemo(() => {
-    const term = query.trim().toLocaleLowerCase();
+    const term = debouncedSearchQuery.toLocaleLowerCase();
     if (!term) return [];
-    return products.filter(p => [
-      p.name, p.brand, p.category, p.subcategory, p.summary, p.description, p.slug, p.sku, p.barcode
-    ].some(value => String(value || '').toLocaleLowerCase().includes(term))).slice(0, 8);
-  }, [products, query]);
+    const matches = [];
+    for (const entry of searchableProducts) {
+      if (entry.searchText.includes(term)) {
+        matches.push(entry.product);
+        if (matches.length === 8) break;
+      }
+    }
+    return matches;
+  }, [searchableProducts, debouncedSearchQuery]);
 
   const loadCatalogue = useCallback(async () => {
     if (!supabaseConfigured || !supabase) { setProducts(PRODUCTS); setCatalogueSource('demo'); setCatalogueLoading(false); return; }
