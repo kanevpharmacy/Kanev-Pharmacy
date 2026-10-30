@@ -954,6 +954,11 @@ export default function App() {
     const destination = String(item.destination_type || 'category');
     const value = String(item.destination_value || item.label || '').trim();
     if (destination === 'url' && /^https?:\/\//i.test(value)) { Linking.openURL(value).catch(() => notify('Link unavailable','This menu link could not be opened.','warning')); return; }
+    // Leaving a product detail view must restore the catalogue before
+    // applying the selected header category.
+    setSelectedProduct(null);
+    setSelectedProductImageIndex(0);
+    setSelectedProductQuantity(1);
     setCategory(destination === 'all' ? 'All' : value || item.label);
     setQuery('');
     setTab('Shop');
@@ -1639,7 +1644,7 @@ export default function App() {
           })()}
           {!isDesktop && Array.isArray(expandedMenuId) && expandedMenuId.some(id => !storeMenuItems.find(item => item.id === id)?.parent_id) && <View style={{backgroundColor:'#FFFFFF',borderTopWidth:1,borderColor:'#E0EAE4',paddingHorizontal:12,paddingVertical:6,maxHeight:360}}><ScrollView nestedScrollEnabled>{expandedMenuId.filter(id => !storeMenuItems.find(item => item.id === id)?.parent_id).map(rootId => <View key={rootId} style={{marginBottom:8}}><StoreMenuBranch items={Object.assign(storeMenuItems.filter(item=>item.parent_id===rootId),{_allItems:storeMenuItems})} expandedId={expandedMenuId} setExpandedId={setExpandedMenuId} onSelect={selectStoreMenuItem}/></View>)}</ScrollView></View>}
         </> : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tmNav} keyboardShouldPersistTaps="handled">
-          {['Medicines', 'Personal Care', 'Wellness', 'Baby Care', 'Skincare', 'Medical Supplies'].map(label => <Pressable key={label} onPress={() => { setCategory(label); setTab('Shop'); }} style={styles.tmNavLink}><Text style={styles.tmNavText}>{label}</Text></Pressable>)}
+          {['Medicines', 'Personal Care', 'Wellness', 'Baby Care', 'Skincare', 'Medical Supplies'].map(label => <Pressable key={label} onPress={() => { setSelectedProduct(null); setSelectedProductImageIndex(0); setCategory(label); setTab('Shop'); }} style={styles.tmNavLink}><Text style={styles.tmNavText}>{label}</Text></Pressable>)}
         </ScrollView>}
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} keyboardShouldPersistTaps="handled">
@@ -1647,7 +1652,7 @@ export default function App() {
         <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16 }]} >
           <View style={styles.footerTop}>
             <View style={styles.footerAbout}><View style={styles.footerLogoRow}><View style={styles.footerLogo}><Ionicons name="leaf" size={19} color="#FFFFFF" /></View><View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text></View></View><Text style={styles.footerAboutCopy}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text><Text style={styles.footerSmall}>Product availability and dispensing are subject to pharmacy confirmation.</Text></View>
-            <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Shop</Text>{['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label=><Pressable key={label} onPress={()=>{setCategory(label);setTab('Shop')}}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
+            <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Shop</Text>{['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label=><Pressable key={label} onPress={()=>{setSelectedProduct(null);setSelectedProductImageIndex(0);setCategory(label);setTab('Shop')}}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
             <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Customer service</Text>{[['My account','Account'],['My cart','Cart'],['Browse products','Shop'],['Get help','Account']].map(([label,target])=><Pressable key={label} onPress={()=>setTab(target)}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
             <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Pharmacy information</Text><Text style={styles.footerLink}>{loginBranding.tagline || 'Closer to Your Health'}</Text><Text style={styles.footerLink}>Zambia · Prices in ZMW</Text><Text style={styles.footerLink}>Delivery or collection</Text><Text style={styles.footerLink}>Prescription review available</Text></View>
           </View>
