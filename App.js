@@ -1682,7 +1682,8 @@ export default function App() {
           {['Medicines', 'Personal Care', 'Wellness', 'Baby Care', 'Skincare', 'Medical Supplies'].map(label => <Pressable key={label} onPress={() => { setSelectedProduct(null); setSelectedProductImageIndex(0); setCategory(label); setTab('Shop'); }} style={styles.tmNavLink}><Text style={styles.tmNavText}>{label}</Text></Pressable>)}
         </ScrollView>}
       </View>}
-      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} keyboardShouldPersistTaps="handled">\n      {!isDesktop && <View style={styles.mobileHeaderSearchWrap}>
+      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} keyboardShouldPersistTaps="handled">
+      {!isDesktop && <View style={styles.mobileHeaderSearchWrap}>
         <View style={styles.mobileHeaderSearch}>
           <Ionicons name="search-outline" size={19} color={COLORS.muted}/>
           <TextInput value={query} onFocus={() => setHeaderSearchFocused(true)} onBlur={() => setTimeout(() => setHeaderSearchFocused(false), 350)} onChangeText={setQuery} onSubmitEditing={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}} placeholder="" placeholderTextColor="#7C8A84" style={styles.mobileHeaderSearchInput} returnKeyType="search" />
