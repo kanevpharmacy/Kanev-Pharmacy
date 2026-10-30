@@ -342,7 +342,7 @@ export default function App() {
     const term = query.trim().toLocaleLowerCase();
     if (!term) return [];
     return products.filter(p => [
-      p.name, p.brand, p.category, p.subcategory, p.description, p.slug, p.sku, p.barcode
+      p.name, p.brand, p.category, p.subcategory, p.summary, p.description, p.slug, p.sku, p.barcode
     ].some(value => String(value || '').toLocaleLowerCase().includes(term))).slice(0, 8);
   }, [products, query]);
 
@@ -352,7 +352,7 @@ export default function App() {
     try {
       // Keep the core products query independent from PostgREST relationship metadata.
       // A missing/renamed FK relationship must not make the entire public catalogue fail.
-      const productColumns = 'id,name,slug,description,brand,image_url,price_zmw,original_price_zmw,rating,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id';
+      const productColumns = 'id,name,slug,description,summary,brand,image_url,price_zmw,original_price_zmw,rating,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id';
       // The image gallery migration may not have been applied yet. Keep the
       // public catalogue working with the legacy primary image until it is.
       let productQuery = await supabase.from('products')
@@ -1520,7 +1520,7 @@ export default function App() {
               <View style={{alignItems:'center',gap:4}}><Ionicons name="ribbon-outline" size={18} color={COLORS.blue}/><Text style={{fontSize:11,color:COLORS.muted}}>100% Original Products</Text></View>
             </View>
             <View style={{gap:7,marginTop:8}}>
-              {(selectedProduct.benefits||[]).length?selectedProduct.benefits.map((benefit,index)=><View key={index} style={{flexDirection:'row',gap:10,alignItems:'flex-start'}}><Text style={{color:COLORS.muted}}>•</Text><Text style={{fontSize:14,color:COLORS.muted,flex:1,lineHeight:21}}>{benefit}</Text></View>):selectedProduct.description?<Text style={styles.detailDescription}>{selectedProduct.description}</Text>:null}
+              {selectedProduct.summary?<Text style={styles.detailDescription}>{selectedProduct.summary}</Text>:null}
             </View>
           </View>
           <View style={{flex:isDesktop?0.9:undefined,width:isDesktop?undefined:'100%',minWidth:0,borderWidth:1,borderColor:COLORS.border,borderRadius:9,padding:16,gap:12,backgroundColor:'#FFFFFF'}}>
