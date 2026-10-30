@@ -190,6 +190,7 @@ export default function App() {
   const [cartStorageReady, setCartStorageReady] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedProductImageIndex, setSelectedProductImageIndex] = useState(0);
+  const [productImageHoverZoom, setProductImageHoverZoom] = useState(false);
   const [selectedProductQuantity, setSelectedProductQuantity] = useState(1);
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '', deliveryNotes: '' });
   const [orderType, setOrderType] = useState('Delivery');
@@ -1506,9 +1507,15 @@ export default function App() {
             <View style={{flexDirection:isDesktop?'column':'row',gap:8,flexWrap:'wrap',justifyContent:'flex-start'}}>
               {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).map((url,index)=><Pressable key={url+index} onPress={()=>setSelectedProductImageIndex(index)} style={{width:68,height:68,borderRadius:9,borderWidth:selectedProductImageIndex===index?2:1,borderColor:selectedProductImageIndex===index?COLORS.blue:COLORS.border,backgroundColor:'#F7FAF8',padding:3,overflow:'hidden'}}><Image source={{uri:optimizedImageUrl(url,180,78)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/></Pressable>)}
             </View>
-            <View style={{flex:1,minWidth:0,height:isDesktop?390:300,borderWidth:1,borderColor:COLORS.border,borderRadius:10,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12}}>
-              {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length ? <Image source={{uri:optimizedImageUrl((Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[]))[Math.min(selectedProductImageIndex,(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length-1)],1000,85)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/> : <Ionicons name={selectedProduct.icon||'medical-outline'} size={76} color={COLORS.green}/>}
-            </View>
+            <Pressable
+              onHoverIn={()=>isDesktop&&setProductImageHoverZoom(true)}
+              onHoverOut={()=>setProductImageHoverZoom(false)}
+              onContextMenu={event=>event.preventDefault()}
+              onDragStart={event=>event.preventDefault()}
+              style={{flex:1,minWidth:0,height:isDesktop?390:300,borderWidth:1,borderColor:COLORS.border,borderRadius:10,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12,overflow:'hidden',...(Platform.OS==='web'?{userSelect:'none',WebkitUserSelect:'none'}:{})}}
+            >
+              {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length ? <Image source={{uri:optimizedImageUrl((Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[]))[Math.min(selectedProductImageIndex,(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length-1)],1600,90)}} resizeMode="contain" style={{width:'100%',height:'100%',transform:[{scale:productImageHoverZoom&&isDesktop?2.05:1}],...(Platform.OS==='web'?{userSelect:'none',WebkitUserSelect:'none'}:{})}}/> : <Ionicons name={selectedProduct.icon||'medical-outline'} size={76} color={COLORS.green}/>}
+            </Pressable>
           </View>
           <View style={{flex:isDesktop?1.35:undefined,minWidth:0,width:isDesktop?undefined:'100%',gap:12,paddingTop:2}}>
             <Text style={styles.detailTitle}>{selectedProduct.name}</Text>
