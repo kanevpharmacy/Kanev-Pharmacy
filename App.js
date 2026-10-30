@@ -568,7 +568,27 @@ export default function App() {
     return groups;
   }, {}));
 
+  const requireCustomerLogin = () => {
+    if (session?.user) return true;
+    setAuthMode('signin');
+    setAuthModalVisible(true);
+    return false;
+  };
+
+  const openCustomerCart = () => {
+    if (!requireCustomerLogin()) return;
+    setSelectedProduct(null);
+    setTab('Cart');
+  };
+
+  const startCustomerCheckout = () => {
+    if (!requireCustomerLogin()) return;
+    setSelectedProduct(null);
+    setTab('Checkout');
+  };
+
   const addToCart = (product, quantity = 1) => {
+    if (!requireCustomerLogin()) return;
     const amount = Math.max(1, Math.floor(Number(quantity) || 1));
     if (product.stock !== undefined && product.stock < 1) return notify('Out of stock', 'This product is currently unavailable.');
     const inCart = cart.find(item => item.id === product.id);
@@ -598,7 +618,7 @@ export default function App() {
   const placeOrder = async () => {
     if (!cart.length) return notify('Your cart is empty', 'Add products before checking out.');
     if (!supabaseConfigured) return notify('Temporarily unavailable', 'Ordering is not available right now. Please try again later or contact Kanev Pharmacy.','warning');
-    if (!session?.user) { setTab('Account'); setAuthMode('signin'); return notify('Sign in required', 'Create a customer account or sign in before submitting an order.'); }
+    if (!requireCustomerLogin()) return;
     if (!customer.name.trim() || !customer.phone.trim()) return notify('Details required', 'Please enter your name and phone number.');
     if (orderType === 'Delivery' && !customer.address.trim()) return notify('Delivery address required', 'Enter the address where you would like your order delivered.');
     setOrderBusy(true);
@@ -664,7 +684,7 @@ export default function App() {
   };
 
   const uploadHealthDocument = async () => {
-    if (!session?.user?.id) { setAuthMode('signin'); setTab('Account'); setAuthModalVisible(true); return notify('Sign in required', 'Please sign in to securely upload a prescription or lab result.'); }
+    if (!requireCustomerLogin()) return;
     if (!supabaseConfigured) return notify('Temporarily unavailable', 'Document upload is unavailable right now. Please try again later.', 'warning');
     if (!selectedHealthAsset) return notify('Choose a document first', 'Select a prescription or lab result so you can preview it before submitting.');
     setHealthDocUploading(true);
@@ -1031,13 +1051,13 @@ export default function App() {
             </View>}
           </View>
           <Pressable style={styles.desktopHeaderLink} onPress={() => { if (session?.user) setTab('Account'); else { setAuthMode('signin'); setAuthModalVisible(true); } }}><Ionicons name="person-outline" size={18} color={COLORS.blue}/><Text style={styles.desktopHeaderLinkText}>{session?.user ? 'My account' : 'Login / Sign up'}</Text></Pressable>
-          <Pressable style={styles.desktopCart} onPress={() => setTab('Cart')} accessibilityLabel={`Cart with ${cartCount} items`}>
+          <Pressable style={styles.desktopCart} onPress={openCustomerCart} accessibilityLabel={`Cart with ${cartCount} items`}>
             <Ionicons name="cart-outline" size={25} color={COLORS.blue} /><Text style={styles.desktopHeaderLinkText}>Cart{cartCount ? ` (${cartCount})` : ''}</Text>
           </Pressable>
         </View>
       ) : (
         <View style={{flexDirection:'row',alignItems:'center',gap:7,marginLeft:6}}>
-          <Pressable style={[styles.cartHeader,{width:43,height:40,borderRadius:11,backgroundColor:'#F0F7F2'}]} onPress={() => {setTab('Cart');setMobileHeaderMenuOpen(false);}} accessibilityLabel={`Cart with ${cartCount} items`}>
+          <Pressable style={[styles.cartHeader,{width:43,height:40,borderRadius:11,backgroundColor:'#F0F7F2'}]} onPress={() => {openCustomerCart();setMobileHeaderMenuOpen(false);}} accessibilityLabel={`Cart with ${cartCount} items`}>
             <Ionicons name="cart-outline" size={23} color={COLORS.green}/>
             {cartCount > 0 && <View style={styles.cartDot}><Text style={styles.cartDotText}>{cartCount}</Text></View>}
           </Pressable>
@@ -1292,7 +1312,7 @@ export default function App() {
             <View style={styles.summaryDivider}/>
             <View style={styles.summaryTotalLine}><Text style={styles.summaryTotalLabel}>Subtotal</Text><Text style={styles.summaryTotalValue}>{money(total)}</Text></View>
             <Text style={styles.summaryNote}>Delivery fees, availability and any prescription requirements will be confirmed by the pharmacy before fulfilment.</Text>
-            <ActionButton title="Proceed to checkout" onPress={() => { setSelectedProduct(null); setTab('Checkout'); }} />
+            <ActionButton title="Proceed to checkout" onPress={startCustomerCheckout} />
             <View style={styles.summarySecure}><Ionicons name="lock-closed-outline" size={15} color={COLORS.green}/><Text style={styles.summarySecureText}>Your order details are handled securely.</Text></View>
           </View>
         </View>
@@ -1594,7 +1614,7 @@ export default function App() {
               <View style={{flex:1}}/>
               <Pressable disabled={selectedProduct.stock<1} onPress={()=>addToCart(selectedProduct,selectedProductQuantity)} style={{height:40,paddingHorizontal:15,borderRadius:6,backgroundColor:COLORS.blue,alignItems:'center',justifyContent:'center',opacity:selectedProduct.stock<1?0.5:1}}><Text style={{color:'#FFFFFF',fontSize:13,fontWeight:'900'}}>Add to Cart</Text></Pressable>
             </View>
-            <Pressable disabled={selectedProduct.stock<1} onPress={()=>{addToCart(selectedProduct,selectedProductQuantity);setTab('Cart');}} style={{height:42,borderWidth:1.5,borderColor:COLORS.blue,borderRadius:6,alignItems:'center',justifyContent:'center',opacity:selectedProduct.stock<1?0.5:1}}><Text style={{color:COLORS.blue,fontWeight:'900',fontSize:13}}>Buy Now</Text></Pressable>
+            <Pressable disabled={selectedProduct.stock<1} onPress={()=>{if(!requireCustomerLogin())return;addToCart(selectedProduct,selectedProductQuantity);setTab('Cart');}} style={{height:42,borderWidth:1.5,borderColor:COLORS.blue,borderRadius:6,alignItems:'center',justifyContent:'center',opacity:selectedProduct.stock<1?0.5:1}}><Text style={{color:COLORS.blue,fontWeight:'900',fontSize:13}}>Buy Now</Text></Pressable>
             <View style={{borderTopWidth:1,borderColor:COLORS.border,paddingTop:12,gap:5}}><Text style={{fontSize:13,fontWeight:'800',color:COLORS.ink}}>Category: <Text style={{color:COLORS.blue,fontWeight:'500'}}>{selectedProduct.category}</Text></Text><Text style={{fontSize:12,color:COLORS.muted}}>Availability and final dispensing decisions are subject to pharmacy confirmation.</Text></View>
           </View>
         </View>
