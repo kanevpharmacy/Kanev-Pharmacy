@@ -1709,7 +1709,7 @@ export default function App() {
           <Pressable style={styles.headerSearchAll} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}}><Text style={styles.headerSearchAllText}>View all search results</Text><Ionicons name="arrow-forward" size={15} color={COLORS.blue}/></Pressable>
         </View>}
       </View>}
-      {!isDesktop && tab !== 'Account' && <View style={styles.tmNavSticky}>
+      {!isDesktop && tab !== 'Account' && <View style={[styles.tmNavSticky,{position:'relative',zIndex:60,elevation:8}]}>
         {storeMenuItems.length ? <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tmNav} keyboardShouldPersistTaps="handled">
             {storeMenuItems.filter(item => !item.parent_id).map(item => {
@@ -1725,11 +1725,11 @@ export default function App() {
             })}
           </ScrollView>
           {Array.isArray(expandedMenuId) && expandedMenuId.some(id => !storeMenuItems.find(item => item.id === id)?.parent_id) &&
-            <View style={{backgroundColor:'#FFFFFF',borderTopWidth:1,borderColor:'#E0EAE4',paddingHorizontal:12,paddingVertical:6,maxHeight:360}}>
-              <ScrollView nestedScrollEnabled>
+            <View style={{position:'absolute',top:'100%',left:0,right:0,zIndex:100,elevation:18,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE8E0',borderTopWidth:2,borderTopColor:COLORS.green,borderBottomLeftRadius:16,borderBottomRightRadius:16,paddingHorizontal:12,paddingVertical:10,maxHeight:340,shadowColor:'#0B3023',shadowOpacity:0.18,shadowRadius:16,shadowOffset:{width:0,height:8},overflow:'hidden'}}>
+              <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
                 {expandedMenuId.filter(id => !storeMenuItems.find(item => item.id === id)?.parent_id).map(rootId =>
                   <View key={rootId} style={{marginBottom:8}}>
-                    <StoreMenuBranch items={Object.assign(storeMenuItems.filter(item=>item.parent_id===rootId),{_allItems:storeMenuItems})} expandedId={expandedMenuId} setExpandedId={setExpandedMenuId} onSelect={selectStoreMenuItem}/>
+                    <StoreMenuBranch items={Object.assign(storeMenuItems.filter(item=>item.parent_id===rootId),{_allItems:storeMenuItems})} expandedId={expandedMenuId} setExpandedId={setExpandedMenuId} onSelect={item=>{selectStoreMenuItem(item);setExpandedMenuId([]);}}/>
                   </View>
                 )}
               </ScrollView>
