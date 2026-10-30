@@ -1017,7 +1017,11 @@ export default function App() {
         </ScrollView>
       </View>
       {/* Removed the duplicate compact category strip; the richer category explorer below is retained. */}
+      <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Popular items</Text><Text style={styles.homeSectionSub}>Browse available pharmacy products</Text></View><Pressable onPress={() => setTab('Shop')}><Text style={styles.link}>View all  →</Text></Pressable></View>
       {catalogueLoading ? <View style={styles.homeLoading}><Text style={styles.smallNote}>Loading live products…</Text></View> : null}
+      {!catalogueLoading && !products.length && catalogueSource !== 'error' ? <View style={styles.homeLoading}><Ionicons name="basket-outline" size={30} color={COLORS.muted}/><Text style={styles.supportTitle}>No products published yet</Text><Text style={styles.supportText}>The pharmacy catalogue will appear here when products are available.</Text></View> : null}
+      <View style={styles.productGrid}>{products.slice(0,10).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View>
+      {products.length > 10 ? <><View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>More to explore</Text><Text style={styles.homeSectionSub}>Healthcare and personal care favourites</Text></View></View><View style={styles.productGrid}>{products.slice(10,20).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View></> : null}
       {!catalogueLoading && catalogueSource === 'error' ? <View style={styles.homeLoading}><Text style={styles.supportTitle}>Catalogue unavailable</Text><ActionButton title="Retry" secondary onPress={loadCatalogue}/></View> : null}
       <View style={styles.marketPanel}>
         <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Deals you'll love</Text><Text style={styles.homeSectionSub}>Everyday essentials at great prices</Text></View><Pressable onPress={() => {setCategory('All');setTab('Shop')}}><Text style={styles.link}>View all  ›</Text></Pressable></View>
