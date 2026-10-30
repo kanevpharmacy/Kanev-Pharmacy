@@ -1202,18 +1202,18 @@ export default function App() {
       {!catalogueLoading && catalogueSource === 'demo' && <Text style={styles.smallNote}>Preview catalogue — live stock and prices will appear when the catalogue is connected.</Text>}
       {!catalogueLoading && catalogueSource === 'error' && <View style={styles.emptyState}><Text style={styles.emptyTitle}>Could not load the live catalogue</Text><Text style={styles.emptyBody}>We couldn’t retrieve the product catalogue. Please try again.</Text><ActionButton title="Retry catalogue" onPress={loadCatalogue} /></View>}
       {!catalogueLoading && catalogueSource === 'live' && products.length === 0 && <View style={styles.emptyState}><Text style={styles.emptyTitle}>No products published yet</Text><Text style={styles.emptyBody}>Add active products in the pharmacy catalogue to display them here.</Text><ActionButton title="Refresh catalogue" onPress={loadCatalogue} secondary /></View>}
-      <View style={styles.searchBox}>
+      {isDesktop && (<View style={styles.searchBox}>
         <Ionicons name="search-outline" size={20} color={COLORS.muted} />
         <TextInput value={query} onChangeText={setQuery} placeholder="Search by product, brand or category..." placeholderTextColor="#83918A" style={styles.searchInput} returnKeyType="search" />
         {query.length > 0 && <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={19} color={COLORS.muted} /></Pressable>}
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 14 }}>
+      </View>)}
+      {isDesktop && (<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 14 }}>
         {['All', ...shopCategoryNodes.map(item => item.label)].map(c => (
           <Pressable key={c} onPress={() => setCategory(c)} style={[styles.filterChip, category === c && styles.filterChipActive]}>
             <Text style={[styles.filterChipText, category === c && styles.filterChipTextActive]}>{c}</Text>
           </Pressable>
         ))}
-      </ScrollView>
+      </ScrollView>)}
       <Text style={styles.resultsText}>{shopFiltered.length} {shopFiltered.length === 1 ? 'product' : 'products'}{query.trim() ? ` found for “${query.trim()}”` : category !== 'All' ? ` in ${category}` : ' available'}</Text>
       {category === 'All' ? <View style={styles.productGrid}>
         {shopFiltered.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}} />)}
@@ -1694,7 +1694,7 @@ export default function App() {
           <Pressable style={styles.headerSearchAll} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}}><Text style={styles.headerSearchAllText}>View all search results</Text><Ionicons name="arrow-forward" size={15} color={COLORS.blue}/></Pressable>
         </View>}
       </View>}
-      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} stickyHeaderIndices={!isDesktop && tab === 'Shop' ? [1] : []} keyboardShouldPersistTaps="handled">
       {!isDesktop && <View style={styles.tmNavSticky}>
         {storeMenuItems.length ? <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tmNav} keyboardShouldPersistTaps="handled">
@@ -1725,6 +1725,15 @@ export default function App() {
         </ScrollView>}
       </View>}
 
+      {!isDesktop && tab === 'Shop' && !selectedProduct && <View style={{backgroundColor:'#F4F8F5',paddingTop:2,paddingBottom:8,zIndex:20,elevation:3,borderBottomWidth:1,borderBottomColor:'#E1EAE4'}}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8,paddingHorizontal:2,paddingVertical:5}}>
+          {['All', ...shopCategoryNodes.map(item => item.label)].map(c => (
+            <Pressable key={c} onPress={() => setCategory(c)} style={[styles.filterChip,category===c&&styles.filterChipActive]}>
+              <Text style={[styles.filterChipText,category===c&&styles.filterChipTextActive]}>{c}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>}
         {renderPage()}
         <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16 }]} >
           <View style={styles.footerTop}>
