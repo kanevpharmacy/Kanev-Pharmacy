@@ -97,7 +97,7 @@ function ActionButton({ title, onPress, secondary = false, disabled = false }) {
   );
 }
 
-function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 145 }) {
+function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 145, imageResizeMode = 'contain' }) {
   const originalPrice = Number(product.original_price || product.original_price_zmw || 0);
   const sellingPrice = Number(product.price || product.price_zmw || 0);
   const discount = originalPrice > sellingPrice && originalPrice > 0
@@ -108,7 +108,7 @@ function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 
     <View style={[styles.productCard,{width:cardWidth,flexBasis:cardWidth,maxWidth:cardWidth}]}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
         <View style={[styles.productImage, { backgroundColor: '#F6F9F7', height: imageHeight }]}>
-          {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%' }} resizeMode="contain" /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
+          {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%' }} resizeMode={imageResizeMode} /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
           <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View>
           {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% Off</Text></View> : null}
         </View>
@@ -1057,7 +1057,7 @@ export default function App() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productCarousel}>
               {section.list.map(product => (
                 <View key={`${section.id}-${product.id}`} style={styles.carouselProduct}>
-                  <ProductCard product={product} cardWidth="100%" imageHeight={88} onAdd={addToCart} onOpen={() => setSelectedProduct(product)} />
+                  <ProductCard product={product} cardWidth="100%" imageHeight={88} imageResizeMode="cover" onAdd={addToCart} onOpen={() => setSelectedProduct(product)} />
                 </View>
               ))}
             </ScrollView>
