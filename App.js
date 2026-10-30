@@ -96,7 +96,7 @@ function ActionButton({ title, onPress, secondary = false, disabled = false }) {
   );
 }
 
-function ProductCard({ product, onAdd, onOpen }) {
+function ProductCard({ product, onAdd, onOpen, cardWidth = '19%' }) {
   const originalPrice = Number(product.original_price || product.original_price_zmw || 0);
   const sellingPrice = Number(product.price || product.price_zmw || 0);
   const discount = originalPrice > sellingPrice && originalPrice > 0
@@ -104,7 +104,7 @@ function ProductCard({ product, onAdd, onOpen }) {
     : 0;
   const rating = Math.max(0, Math.min(5, Number(product.rating ?? 5)));
   return (
-    <View style={styles.productCard}>
+    <View style={[styles.productCard,{width:cardWidth,flexBasis:cardWidth,maxWidth:cardWidth}]}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
         <View style={[styles.productImage, { backgroundColor: '#FFFFFF' }]}>
           {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%' }} resizeMode="contain" /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
@@ -1020,8 +1020,8 @@ export default function App() {
       {catalogueLoading ? <View style={styles.homeLoading}><Text style={styles.smallNote}>Loading live products…</Text></View> : null}
       {!catalogueLoading && catalogueSource === 'error' ? <View style={styles.homeLoading}><Text style={styles.supportTitle}>Catalogue unavailable</Text><ActionButton title="Retry" secondary onPress={loadCatalogue}/></View> : null}
       {!catalogueLoading && !products.length && catalogueSource !== 'error' ? <View style={styles.homeLoading}><Ionicons name="basket-outline" size={30} color={COLORS.muted}/><Text style={styles.supportTitle}>No products published yet</Text><Text style={styles.supportText}>The pharmacy catalogue will appear here when products are available.</Text></View> : null}
-      <View style={styles.productGrid}>{products.slice(0,8).map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View>
-      {products.length > 8 ? <><View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>More to explore</Text><Text style={styles.homeSectionSub}>Healthcare and personal care favourites</Text></View></View><View style={styles.productGrid}>{products.slice(8,16).map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View></> : null}
+      <View style={styles.productGrid}>{products.slice(0,10).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View>
+      {products.length > 10 ? <><View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>More to explore</Text><Text style={styles.homeSectionSub}>Healthcare and personal care favourites</Text></View></View><View style={styles.productGrid}>{products.slice(10,20).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View></> : null}
       <View style={styles.marketPanel}>
         <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Deals you'll love</Text><Text style={styles.homeSectionSub}>Everyday essentials at great prices</Text></View><Pressable onPress={() => {setCategory('All');setTab('Shop')}}><Text style={styles.link}>View all  ›</Text></Pressable></View>
         <View style={styles.promoTiles}>{(storeBanners.filter(x => x.placement === 'deal_tile').length ? storeBanners.filter(x => x.placement === 'deal_tile') : [{id:'default-deal-1',eyebrow:'Kanev offers',title:'Care that fits your budget',button_text:'Explore offers',background_color:'#E3F3FC',text_color:'#064E3B',link_url:''},{id:'default-deal-2',eyebrow:'Wellness picks',title:'Support your everyday wellbeing',button_text:'Shop wellness',background_color:'#FFF0DE',text_color:'#064E3B',link_url:'wellness'}]).slice(0,4).map((banner,index)=><Pressable key={banner.id} style={[styles.promoTile,{backgroundColor:banner.background_color||'#E3F3FC',overflow:'hidden'}]} onPress={()=>{if(banner.link_url&&/^https?:\/\//i.test(banner.link_url)) Linking.openURL(banner.link_url).catch(()=>{}); else {setCategory(index===1?'Wellness':'All');setTab('Shop');}}}>{(banner.image_url || (Array.isArray(banner.image_urls) && banner.image_urls.length))?<BannerImageSlideshow banner={banner} opacity={.24} showDots={false}/>:null}<Text style={[styles.promoTileKicker,{color:banner.text_color||'#064E3B'}]}>{banner.eyebrow||'Kanev Pharmacy'}</Text><Text style={[styles.promoTileTitle,{color:banner.text_color||'#064E3B'}]}>{banner.title}</Text><Text style={[styles.promoTileLink,{color:banner.text_color||'#236DA8'}]}>{banner.button_text||'Explore' }  →</Text></Pressable>)}</View>
