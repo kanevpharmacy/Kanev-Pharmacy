@@ -1048,7 +1048,7 @@ export default function App() {
           }).slice(0, 10);
           return { id: node.id, heading: node.label, list };
         }).filter(section => section.list.length > 0);
-        return sections.map((section, sectionIndex) => {
+        return <>{sections.map((section, sectionIndex) => {
           const inlinePlacement = sectionIndex === 1 ? 'category_slot_2_3' : sectionIndex === 4 ? 'category_slot_5_6' : null;
           const inlineBanners = inlinePlacement ? storeBanners.filter(banner => banner.placement === inlinePlacement && banner.is_active !== false) : [];
           return <View key={section.id}>
@@ -1065,7 +1065,9 @@ export default function App() {
             </ScrollView>
           {inlineBanners.map(banner => <Pressable key={banner.id} onPress={() => banner.link_url && String(banner.link_url).startsWith('http') ? Linking.openURL(banner.link_url).catch(() => {}) : setTab('Shop')} style={{width:'100%',height:112,borderRadius:12,overflow:'hidden',backgroundColor:banner.background_color||'#E8F3EC',marginBottom:20,position:'relative'}}>{(banner.image_url || (Array.isArray(banner.image_urls) && banner.image_urls.length)) ? <BannerImageSlideshow banner={banner} opacity={1} showDots={false}/> : null}{(!banner.image_url && !(Array.isArray(banner.image_urls) && banner.image_urls.length)) ? <View style={{flex:1,justifyContent:'center',padding:18}}><Text style={{fontSize:18,fontWeight:'900',color:banner.text_color||COLORS.green}}>{banner.title}</Text>{banner.description ? <Text style={{fontSize:12,color:banner.text_color||COLORS.green,marginTop:4}}>{banner.description}</Text> : null}</View> : null}</Pressable>)}
           </View>;
-        });
+        })}
+        {sections.length < 5 ? storeBanners.filter(banner => banner.placement === 'category_slot_5_6' && banner.is_active !== false).map(banner => <Pressable key={banner.id} onPress={() => banner.link_url && String(banner.link_url).startsWith('http') ? Linking.openURL(banner.link_url).catch(() => {}) : setTab('Shop')} style={{width:'100%',height:112,borderRadius:12,overflow:'hidden',backgroundColor:banner.background_color||'#E8F3EC',marginBottom:20,position:'relative'}}>{(banner.image_url || (Array.isArray(banner.image_urls) && banner.image_urls.length)) ? <BannerImageSlideshow banner={banner} opacity={1} showDots={false}/> : null}{(!banner.image_url && !(Array.isArray(banner.image_urls) && banner.image_urls.length)) ? <View style={{flex:1,justifyContent:'center',padding:18}}><Text style={{fontSize:18,fontWeight:'900',color:banner.text_color||COLORS.green}}>{banner.title}</Text>{banner.description ? <Text style={{fontSize:12,color:banner.text_color||COLORS.green,marginTop:4}}>{banner.description}</Text> : null}</View> : null}</Pressable>) : null}
+        </>
       })()}
       <View style={styles.orderVia}><Text style={styles.orderViaEyebrow}>A SIMPLE WAY TO ORDER</Text><Text style={styles.orderViaTitle}>Choose how we can help</Text><View style={styles.orderViaCards}><Pressable style={styles.orderViaCard} onPress={()=>setTab('Shop')}><Ionicons name="call-outline" size={26} color={COLORS.green}/><View style={{flex:1}}><Text style={styles.tmQuickTitle}>Browse and order online</Text><Text style={styles.tmQuickSubtitle}>Choose products and submit an order request.</Text></View><Ionicons name="chevron-forward" size={18} color={COLORS.green}/></Pressable><Pressable style={styles.orderViaCard} onPress={()=>setTab('Account')}><Ionicons name="document-attach-outline" size={26} color={COLORS.green}/><View style={{flex:1}}><Text style={styles.tmQuickTitle}>Have a prescription?</Text><Text style={styles.tmQuickSubtitle}>Sign in to contact the pharmacy about prescription review.</Text></View><Ionicons name="chevron-forward" size={18} color={COLORS.green}/></Pressable></View></View>
       <View style={styles.contentEditorial}>
