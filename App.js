@@ -97,19 +97,27 @@ function ActionButton({ title, onPress, secondary = false, disabled = false }) {
 }
 
 function ProductCard({ product, onAdd, onOpen }) {
+  const originalPrice = Number(product.original_price || product.original_price_zmw || 0);
+  const sellingPrice = Number(product.price || product.price_zmw || 0);
+  const discount = originalPrice > sellingPrice && originalPrice > 0
+    ? Math.round((1 - sellingPrice / originalPrice) * 100)
+    : 0;
+  const rating = Math.max(0, Math.min(5, Number(product.rating ?? 5)));
   return (
     <View style={styles.productCard}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
-        <View style={[styles.productImage, { backgroundColor: product.tint || '#EAF4EE' }]}>
-          {product.image_url ? <Image source={{ uri: optimizedImageUrl(product.image_url, 560, 72) }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="contain" /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
-          {product.badge ? <Text style={styles.productBadge}>{product.badge}</Text> : null}
+        <View style={[styles.productImage, { backgroundColor: '#FFFFFF' }]}>
+          {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%' }} resizeMode="contain" /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
+          <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View>
+          {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% Off</Text></View> : null}
         </View>
-        <Text style={styles.productCategory}>{product.category}</Text>
         <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.productDescription} numberOfLines={2}>{product.description}</Text>
       </Pressable>
       <View style={styles.productBottom}>
-        <Text style={styles.price}>{money(product.price)}</Text>
+        <View style={{flex:1,minWidth:0}}>
+          <Text style={styles.price} numberOfLines={1}>{money(sellingPrice)}</Text>
+          {discount > 0 ? <Text style={styles.originalPrice} numberOfLines={1}>{money(originalPrice)}</Text> : null}
+        </View>
         <Pressable onPress={() => onAdd(product)} style={styles.addButton} accessibilityLabel={`Add ${product.name} to cart`}>
           <Ionicons name="add" size={22} color="#FFFFFF" />
         </Pressable>
@@ -343,7 +351,7 @@ export default function App() {
       // A missing/renamed FK relationship must not make the entire public catalogue fail.
       const { data, error } = await supabase
         .from('products')
-        .select('id,name,slug,description,brand,image_url,price_zmw,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id')
+        .select('id,name,slug,description,brand,image_url,price_zmw,original_price_zmw,rating,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id')
         .eq('is_active', true)
         .order('is_featured', { ascending: false })
         .order('name');
@@ -369,6 +377,9 @@ export default function App() {
           category_ids: categoryIds,
           categories_list: categoryNames,
           price: Number(p.price_zmw || 0),
+          original_price: Number(p.original_price_zmw || 0),
+          rating: Number(p.rating ?? 5),
+          discount_percent: Number(p.original_price_zmw) > Number(p.price_zmw) ? Math.round((1 - Number(p.price_zmw) / Number(p.original_price_zmw)) * 100) : 0,
           category: categoryNames[0] || 'Other',
           subcategory: subcategoryNamesById[p.menu_subcategory_id] || '',
           prescriptionRequired: p.requires_prescription,
@@ -1752,15 +1763,20 @@ const styles = StyleSheet.create({
   categoryCard: { width: 104, paddingVertical: 15, paddingHorizontal: 9, backgroundColor: '#FFFFFF', borderRadius: 17, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   categoryIcon: { width: 43, height: 43, borderRadius: 14, backgroundColor: COLORS.pale, alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
   categoryName: { color: COLORS.ink, fontWeight: '700', fontSize: 11, textAlign: 'center' },
-  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  productCard: { width: '48%', flexGrow: 1, flexBasis: 145, maxWidth: 260, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 10, borderWidth: 1, borderColor: COLORS.border },
-  productImage: { height: 125, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginBottom: 11, position: 'relative' },
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
+  productCard: { width: '19%', flexGrow: 0, flexShrink: 0, flexBasis: '19%', maxWidth: '19%', backgroundColor: '#FFFFFF', borderRadius: 17, padding: 9, borderWidth: 1, borderColor: COLORS.border, minWidth: 0 },
+  productImage: { height: 155, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 9, position: 'relative' },
+  ratingBadge: {position:'absolute',top:7,left:7,backgroundColor:'#139FDB',borderRadius:12,paddingHorizontal:7,paddingVertical:3,flexDirection:'row',alignItems:'center',gap:3},
+  ratingBadgeText: {color:'#FFFFFF',fontSize:10,fontWeight:'900'},
+  discountBadge: {position:'absolute',top:7,right:7,backgroundColor:'#FF7417',borderRadius:4,paddingHorizontal:6,paddingVertical:4},
+  discountBadgeText: {color:'#FFFFFF',fontSize:10,fontWeight:'900'},
+  originalPrice: {color:'#9AA3A0',fontSize:11,fontWeight:'700',textDecorationLine:'line-through',marginTop:2},
   productBadge: { position: 'absolute', top: 8, left: 8, overflow: 'hidden', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 4, color: COLORS.green, backgroundColor: '#FFFFFF', fontSize: 9, fontWeight: '900' },
-  productCategory: { fontSize: 10, color: COLORS.blue, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 },
-  productName: { color: COLORS.ink, fontSize: 13, lineHeight: 18, fontWeight: '800', minHeight: 36 },
-  productDescription: { color: COLORS.muted, fontSize: 11, lineHeight: 16, marginTop: 4, minHeight: 32 },
-  productBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  price: { color: COLORS.green, fontSize: 15, fontWeight: '900' },
+  productCategory: { display: 'none' },
+  productName: { color: COLORS.ink, fontSize: 12, lineHeight: 17, fontWeight: '800', minHeight: 34, marginTop: 5 },
+  productDescription: { display: 'none' },
+  productBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, gap: 5 },
+  price: { color: COLORS.green, fontSize: 14, fontWeight: '900' },
   addButton: { width: 33, height: 33, borderRadius: 11, backgroundColor: COLORS.green, alignItems: 'center', justifyContent: 'center' },
   supportBanner: { marginTop: 24, padding: 16, borderRadius: 17, backgroundColor: '#EAF4EE', flexDirection: 'row', alignItems: 'center', gap: 12 },
   supportTitle: { color: COLORS.ink, fontSize: 13, fontWeight: '900' },
