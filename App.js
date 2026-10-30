@@ -18,6 +18,26 @@ import KanevNoticeModal from './src/components/KanevNoticeModal';
 
 const money = (amount) => `K${Number(amount).toFixed(2)}`;
 
+// Request appropriately sized, compressed variants from Supabase Storage.
+// Original files remain untouched; the browser downloads smaller derivatives.
+const optimizedImageUrl = (url, width = 720, quality = 72) => {
+  if (!url || typeof url !== 'string') return url;
+  try {
+    const parsed = new URL(url);
+    const marker = '/storage/v1/object/public/';
+    if (!parsed.pathname.includes(marker)) return url;
+    const objectPath = parsed.pathname.slice(parsed.pathname.indexOf(marker) + marker.length);
+    parsed.pathname = parsed.pathname.replace(marker, '/storage/v1/render/image/public/');
+    parsed.searchParams.set('width', String(width));
+    parsed.searchParams.set('quality', String(quality));
+    parsed.searchParams.set('resize', 'contain');
+    // Preserve any existing version/cache-busting query parameters.
+    return parsed.toString();
+  } catch (_) {
+    return url;
+  }
+};
+
 // Each banner owns its own slideshow timer and selected transition effect.
 // One image stays still; multiple images rotate at a relaxed 7-second interval.
 function BannerImageSlideshow({ banner, style, resizeMode = 'cover', opacity = 1, showDots = true, initialIndex = 0 }) {
@@ -55,7 +75,7 @@ function BannerImageSlideshow({ banner, style, resizeMode = 'cover', opacity = 1
   const scale = effect === 'zoom' ? progress.interpolate({inputRange:[0,1],outputRange:[1.12,1]}) : effect === 'pop' ? progress.interpolate({inputRange:[0,1],outputRange:[0.82,1]}) : 1;
   const imageOpacity = effect === 'fade' ? progress.interpolate({inputRange:[0,1],outputRange:[0,opacity]}) : progress.interpolate({inputRange:[0,1],outputRange:[opacity*0.72,opacity]});
   return <View pointerEvents="none" style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }, style]}>
-    <Animated.Image source={{ uri: images[index % images.length] }} resizeMode={banner?.image_fit || resizeMode} style={{ width: '100%', height: '100%', opacity:imageOpacity, transform:[{translateX},{translateY},{scale}] }} />
+    <Animated.Image source={{ uri: optimizedImageUrl(images[index % images.length], 1400, 78) }} resizeMode={banner?.image_fit || resizeMode} style={{ width: '100%', height: '100%', opacity:imageOpacity, transform:[{translateX},{translateY},{scale}] }} />
     {images.length > 1 && showDots ? <View style={{ position: 'absolute', bottom: 9, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5 }}>{images.map((_, i) => <View key={`${banner?.id || 'banner'}-dot-${i}`} style={{ width: i === index ? 17 : 6, height: 6, borderRadius: 4, backgroundColor: i === index ? '#FFFFFF' : 'rgba(255,255,255,0.65)', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.18)' }} />)}</View> : null}
   </View>;
 }
@@ -84,7 +104,7 @@ function ProductCard({ product, onAdd, onOpen }) {
     <View style={styles.productCard}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
         <View style={[styles.productImage, { backgroundColor: product.tint || '#EAF4EE' }]}>
-          {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="contain" /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
+          {product.image_url ? <Image source={{ uri: optimizedImageUrl(product.image_url, 560, 72) }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="contain" /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
           {product.badge ? <Text style={styles.productBadge}>{product.badge}</Text> : null}
         </View>
         <Text style={styles.productCategory}>{product.category}</Text>
@@ -898,7 +918,7 @@ export default function App() {
     <View style={[styles.header, isDesktop && styles.headerDesktop, !isDesktop && styles.headerCompact]}>
       <Pressable style={styles.brandRow} onPress={() => { setTab('Home'); setSelectedProduct(null); }} accessibilityRole="button" accessibilityLabel="Kanev Pharmacy home">
         <View style={styles.headerLogoHolder}>
-          {loginBranding.header_logo_url ? <Image source={{ uri: loginBranding.header_logo_url }} style={styles.headerLogoImage} resizeMode="contain" /> : <>
+          {loginBranding.header_logo_url ? <Image source={{ uri: optimizedImageUrl(loginBranding.header_logo_url, 240, 75) }} style={styles.headerLogoImage} resizeMode="contain" /> : <>
             <View style={styles.logoMark}><Ionicons name="leaf" size={21} color="#FFFFFF" /><View style={styles.logoPlus}><Ionicons name="add" size={13} color={COLORS.green} /></View></View>
           </>}
         </View>
@@ -980,7 +1000,7 @@ export default function App() {
             const icon = CATEGORIES.find(c=>c.name.toLowerCase()===String(item.name).toLowerCase())?.icon || 'medkit-outline';
             return <Pressable key={item.id || item.name} style={styles.roundCategoryItem} onPress={()=>{setCategory(item.name);setTab('Shop')}} accessibilityRole="button" accessibilityLabel={`Shop ${item.name}`}>
               <View style={styles.roundCategoryImageWrap}>
-                {image ? <Image source={{uri:image}} style={styles.roundCategoryImage} resizeMode="contain" /> : <View style={[styles.roundCategoryFallback,{backgroundColor:['#E4F1CF','#E9DDF8','#F7DDF2','#DDEBFA','#FCE6DD','#E5F2E9'][i%6]}]}><Ionicons name={icon} size={37} color={COLORS.green}/></View>}
+                {image ? <Image source={{uri:optimizedImageUrl(image, 240, 72)}} style={styles.roundCategoryImage} resizeMode="contain" /> : <View style={[styles.roundCategoryFallback,{backgroundColor:['#E4F1CF','#E9DDF8','#F7DDF2','#DDEBFA','#FCE6DD','#E5F2E9'][i%6]}]}><Ionicons name={icon} size={37} color={COLORS.green}/></View>}
               </View>
               <Text style={styles.roundCategoryLabel} numberOfLines={2}>{item.name}</Text>
             </Pressable>;
@@ -1104,7 +1124,7 @@ export default function App() {
             {cart.map(item => (
               <View key={item.id} style={styles.cartProductRow}>
                 <View style={[styles.cartProductImage, { backgroundColor: item.tint || '#EAF4EE' }]}>
-                  {item.image_url ? <Image source={{ uri: item.image_url }} resizeMode="contain" style={{ width: '100%', height: '100%' }} /> : <Ionicons name={item.icon || 'medical-outline'} size={30} color={COLORS.green} />}
+                  {item.image_url ? <Image source={{ uri: optimizedImageUrl(item.image_url, 320, 72) }} resizeMode="contain" style={{ width: '100%', height: '100%' }} /> : <Ionicons name={item.icon || 'medical-outline'} size={30} color={COLORS.green} />}
                 </View>
                 <View style={styles.cartProductInfo}>
                   <Text style={styles.cartProductCategory}>{item.category || 'PHARMACY PRODUCT'}</Text>
@@ -1175,7 +1195,7 @@ export default function App() {
           <View style={[styles.orderSummaryCard, isDesktop && styles.orderSummaryCardDesktop]}>
             <Text style={styles.panelHeading}>Your order</Text>
             <Text style={styles.checkoutSummaryCount}>{cartCount} item{cartCount===1?'':'s'} in your basket</Text>
-            {cart.map(item=><View key={item.id} style={styles.checkoutSummaryProduct}><View style={styles.checkoutSummaryThumb}>{item.image_url?<Image source={{uri:item.image_url}} resizeMode="contain" style={{width:'100%',height:'100%'}}/>:<Ionicons name={item.icon||'medical-outline'} size={20} color={COLORS.green}/>}</View><View style={{flex:1,minWidth:0}}><Text numberOfLines={2} style={styles.checkoutSummaryProductName}>{item.name}</Text><Text style={styles.checkoutSummaryProductMeta}>Qty {item.qty} × {money(item.price)}</Text></View><Text style={styles.checkoutSummaryProductPrice}>{money(item.price*item.qty)}</Text></View>)}
+            {cart.map(item=><View key={item.id} style={styles.checkoutSummaryProduct}><View style={styles.checkoutSummaryThumb}>{item.image_url?<Image source={{uri:optimizedImageUrl(item.image_url, 240, 70)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/>:<Ionicons name={item.icon||'medical-outline'} size={20} color={COLORS.green}/>}</View><View style={{flex:1,minWidth:0}}><Text numberOfLines={2} style={styles.checkoutSummaryProductName}>{item.name}</Text><Text style={styles.checkoutSummaryProductMeta}>Qty {item.qty} × {money(item.price)}</Text></View><Text style={styles.checkoutSummaryProductPrice}>{money(item.price*item.qty)}</Text></View>)}
             <View style={styles.summaryDivider}/>
             <View style={styles.summaryLine}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryValue}>{money(total)}</Text></View>
             <View style={styles.summaryLine}><Text style={styles.summaryLabel}>Delivery fee</Text><Text style={styles.summaryValuePending}>{orderType==='Delivery'?'To be confirmed':'Not applicable'}</Text></View>
@@ -1395,7 +1415,7 @@ export default function App() {
     if (selectedProduct && tab === 'Shop') return (
       <View style={styles.detailWrap}>
         <Pressable onPress={() => setSelectedProduct(null)} style={styles.backButton}><Ionicons name="arrow-back" size={21} color={COLORS.green} /><Text style={styles.backText}>Back to shop</Text></Pressable>
-        {selectedProduct.image_url ? <Image source={{ uri: selectedProduct.image_url }} style={[styles.detailImage, { backgroundColor: selectedProduct.tint || '#EAF4EE' }]} resizeMode="contain" /> : <View style={[styles.detailImage, { backgroundColor: selectedProduct.tint || '#EAF4EE' }]}><Ionicons name={selectedProduct.icon || 'medical-outline'} size={76} color={COLORS.green} /></View>}
+        {selectedProduct.image_url ? <Image source={{ uri: optimizedImageUrl(selectedProduct.image_url, 1000, 78) }} style={[styles.detailImage, { backgroundColor: selectedProduct.tint || '#EAF4EE' }]} resizeMode="contain" /> : <View style={[styles.detailImage, { backgroundColor: selectedProduct.tint || '#EAF4EE' }]}><Ionicons name={selectedProduct.icon || 'medical-outline'} size={76} color={COLORS.green} /></View>}
         <Text style={styles.productCategory}>{selectedProduct.category}</Text>
         <Text style={styles.detailTitle}>{selectedProduct.name}</Text>
         <Text style={styles.detailPrice}>{money(selectedProduct.price)}</Text>
