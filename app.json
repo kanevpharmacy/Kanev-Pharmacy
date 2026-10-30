@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Kanev Pharmacy",
+    "slug": "kanev-pharmacy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "kanevpharmacy",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "zm.kanevpharmacy.app"
+    },
+    "android": {
+      "package": "zm.kanevpharmacy.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F4F8F5"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "name": "Kanev Pharmacy",
+      "shortName": "Kanev",
+      "themeColor": "#0B4B36",
+      "backgroundColor": "#F4F8F5"
+    },
+    "plugins": [
+      "expo-asset"
+    ]
+  }
+}
