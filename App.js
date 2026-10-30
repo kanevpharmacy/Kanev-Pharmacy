@@ -180,6 +180,7 @@ export default function App() {
   const [tab, setTab] = useState('Home');
   const [query, setQuery] = useState('');
   const [headerSearchFocused, setHeaderSearchFocused] = useState(false);
+  const [mobileHeaderMenuOpen, setMobileHeaderMenuOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [deliveryModalVisible, setDeliveryModalVisible] = useState(false);
   const [deliverySearch, setDeliverySearch] = useState('');
@@ -980,7 +981,7 @@ export default function App() {
         </View>
         <View style={{ minWidth: 0,flexShrink:1 }}>
           <Text numberOfLines={1} style={[styles.brandName, { color: loginBranding.brand_title_color || COLORS.green, fontSize: Math.min(Number(loginBranding.brand_title_size) || 15, isDesktop?18:15), fontFamily: loginBranding.brand_title_font_family === 'System' ? undefined : loginBranding.brand_title_font_family }]}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
-          <Text numberOfLines={1} style={[styles.tagline, { color: loginBranding.tagline_color || COLORS.blue, fontSize: Math.min(Number(loginBranding.tagline_size) || 10, isDesktop?12:10), fontFamily: loginBranding.tagline_font_family === 'System' ? undefined : loginBranding.tagline_font_family }]}>{loginBranding.tagline || 'Closer to Your Health'}</Text>
+          {isDesktop && <Text numberOfLines={1} style={[styles.tagline, { color: loginBranding.tagline_color || COLORS.blue, fontSize: Math.min(Number(loginBranding.tagline_size) || 10, 12), fontFamily: loginBranding.tagline_font_family === 'System' ? undefined : loginBranding.tagline_font_family }]}>{loginBranding.tagline || 'Closer to Your Health'}</Text>}
         </View>
       </Pressable>
       {isDesktop ? (
@@ -1009,14 +1010,24 @@ export default function App() {
           </Pressable>
         </View>
       ) : (
-        <View style={{flexDirection:'row',alignItems:'center',gap:8,marginLeft:8}}>
-          <Pressable onPress={() => { if (session?.user) setTab('Account'); else { setAuthMode('signin'); setAuthModalVisible(true); } }} style={{width:39,height:39,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:'#F3F8F5',borderWidth:1,borderColor:'#E1EBE4'}} accessibilityLabel={session?.user?'My account':'Sign in'}>
-            <Ionicons name="person-outline" size={20} color={COLORS.green}/>
+        <View style={{flexDirection:'row',alignItems:'center',gap:7,marginLeft:6}}>
+          <Pressable style={[styles.cartHeader,{width:43,height:40,borderRadius:11,backgroundColor:'#F0F7F2'}]} onPress={() => {setTab('Cart');setMobileHeaderMenuOpen(false);}} accessibilityLabel={`Cart with ${cartCount} items`}>
+            <Ionicons name="cart-outline" size={23} color={COLORS.green}/>
+            {cartCount > 0 && <View style={styles.cartDot}><Text style={styles.cartDotText}>{cartCount}</Text></View>}
           </Pressable>
-          <Pressable style={[styles.cartHeader,{width:cartCount>0?54:42,height:39,borderRadius:12,flexDirection:'row',gap:3,backgroundColor:COLORS.pale,borderWidth:1,borderColor:'#DCEBE1'}]} onPress={() => setTab('Cart')} accessibilityLabel={`Cart with ${cartCount} items`}>
-            <Ionicons name="bag-handle-outline" size={21} color={COLORS.green}/>
-            {cartCount > 0 && <Text style={{fontSize:11,fontWeight:'900',color:COLORS.green}}>{cartCount}</Text>}
+          <Pressable onPress={()=>setMobileHeaderMenuOpen(v=>!v)} style={{width:39,height:40,borderRadius:11,alignItems:'center',justifyContent:'center',backgroundColor:'#F0F7F2'}} accessibilityRole="button" accessibilityLabel="Open menu">
+            <Ionicons name={mobileHeaderMenuOpen?'close':'ellipsis-vertical'} size={23} color={COLORS.green}/>
           </Pressable>
+          {mobileHeaderMenuOpen && <View style={{position:'absolute',right:0,top:47,width:205,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:COLORS.border,borderRadius:13,padding:7,zIndex:3000,elevation:24,shadowColor:'#17382B',shadowOpacity:.18,shadowRadius:14,shadowOffset:{width:0,height:7},gap:2}}>
+            {[
+              {label:'Home',icon:'home-outline',action:()=>{setTab('Home');setSelectedProduct(null);}},
+              {label:'Shop products',icon:'grid-outline',action:()=>{setTab('Shop');setSelectedProduct(null);setCategory('All');}},
+              {label:session?.user?'My account':'Sign in',icon:'person-outline',action:()=>{if(session?.user)setTab('Account');else{setAuthMode('signin');setAuthModalVisible(true);}}},
+              {label:'Delivery location',icon:'location-outline',action:()=>{setDeliverySearch(deliveryLocation.label==='Zambia'?'':deliveryLocation.label);setDeliveryModalVisible(true);}},
+            ].map(item=><Pressable key={item.label} onPress={()=>{setMobileHeaderMenuOpen(false);item.action();}} style={{minHeight:43,paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:10,borderRadius:8}}>
+              <Ionicons name={item.icon} size={18} color={COLORS.green}/><Text style={{fontSize:13,fontWeight:'700',color:COLORS.ink}}>{item.label}</Text>
+            </Pressable>)}
+          </View>}
         </View>
       )}
     </View>
@@ -1024,14 +1035,7 @@ export default function App() {
 
   const Home = () => (
     <>
-      <View style={[styles.tmTopStrip, isDesktop && { display: 'none' }]}>
-        <Pressable onPress={() => { setDeliverySearch(deliveryLocation.label === 'Zambia' ? '' : deliveryLocation.label); setDeliveryModalVisible(true); }} style={{flexDirection:'row',alignItems:'center',gap:5,flex:1,minWidth:0}}>
-          <Ionicons name="location-outline" size={14} color={COLORS.green}/>
-          <Text numberOfLines={1} style={styles.tmTopStripText}>Deliver to <Text style={{fontWeight:'900',color:COLORS.green}}>{deliveryLocation.label || 'Choose location'}</Text></Text>
-          <Ionicons name="chevron-down" size={12} color={COLORS.green}/>
-        </Pressable>
-        <Pressable onPress={() => { if (session?.user) setTab('Account'); else { setAuthMode('signin'); setAuthModalVisible(true); } }}><Text style={styles.tmTopStripText}>{session?.user ? 'My account' : 'Sign in'} ›</Text></Pressable>
-      </View>
+
       <View style={styles.tmHero}>
         <View style={styles.tmHeroServices}>
           {[
@@ -1613,8 +1617,8 @@ export default function App() {
         <View style={styles.mobileHeaderSearch}>
           <Ionicons name="search-outline" size={19} color={COLORS.muted}/>
           <TextInput value={query} onFocus={() => setHeaderSearchFocused(true)} onBlur={() => setTimeout(() => setHeaderSearchFocused(false), 350)} onChangeText={setQuery} onSubmitEditing={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}} placeholder="" placeholderTextColor="#7C8A84" style={styles.mobileHeaderSearchInput} returnKeyType="search" />
-          {!query.trim() && rotatingProducts.length > 0 && <View pointerEvents="none" style={styles.rotatingPlaceholderClipMobile}><Text style={[styles.rotatingPlaceholderText, { fontWeight: '900' }]}>Try </Text><View style={styles.rotatingProductClip}><Animated.Text numberOfLines={1} style={[styles.rotatingPlaceholderText,{transform:[{translateY:placeholderSlide}]}]}>{rotatingProducts[placeholderIndex % rotatingProducts.length]}…</Animated.Text></View></View>}
-          <Pressable style={styles.mobileHeaderSearchButton} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}}><Text style={styles.desktopSearchButtonText}>Search</Text></Pressable>
+          {!query.trim() && rotatingProducts.length > 0 && <View pointerEvents="none" style={styles.rotatingPlaceholderClipMobile}><Text style={[styles.rotatingPlaceholderText, { fontWeight: '700' }]}>Shop </Text><View style={styles.rotatingProductClip}><Animated.Text numberOfLines={1} style={[styles.rotatingPlaceholderText,{transform:[{translateY:placeholderSlide}]}]}>{rotatingProducts[placeholderIndex % rotatingProducts.length]}…</Animated.Text></View></View>}
+          <Pressable style={[styles.mobileHeaderSearchButton,{width:40,height:38,paddingHorizontal:0,borderRadius:20}]} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}} accessibilityLabel="Search products"><Ionicons name="search" size={19} color="#FFFFFF"/></Pressable>
         </View>
         {headerSearchFocused && query.trim().length > 0 && <View style={styles.mobileHeaderSearchDropdown}>
           {catalogueLoading ? <Text style={styles.headerSearchNoResult}>Searching the product catalogue…</Text> : headerSearchMatches.length ? headerSearchMatches.map(p => <Pressable key={p.id} style={styles.headerSearchResult} onPress={() => {setSelectedProduct(p);setTab('Shop');setHeaderSearchFocused(false);}}><View style={styles.headerSearchResultIcon}>{p.image_url ? <Image source={{uri:p.image_url}} style={{width:34,height:34,borderRadius:8}} resizeMode="contain"/> : <Ionicons name="medical-outline" size={19} color={COLORS.green}/>}</View><View style={{flex:1,minWidth:0}}><Text numberOfLines={1} style={styles.headerSearchResultName}>{p.name}</Text><Text numberOfLines={1} style={styles.headerSearchResultMeta}>{p.category || p.brand || 'Pharmacy product'}</Text></View><Text style={styles.headerSearchResultPrice}>{money(p.price)}</Text></Pressable>) : <Text style={styles.headerSearchNoResult}>No matching products found.</Text>}
@@ -1892,7 +1896,7 @@ const styles = StyleSheet.create({
   pageContentTablet: { paddingHorizontal: 24, paddingTop: 20 },
   pageContentMobile: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 22 },
   headerDesktop: { paddingHorizontal: 32, minHeight: 82 },
-  headerCompact: { paddingHorizontal: 14, minHeight: 62, paddingVertical: 8, gap: 6 },
+  headerCompact: { paddingHorizontal: 14, minHeight: 56, paddingVertical: 7, gap: 6 },
   tabBarDesktop: { display: 'none' },
   hero: { backgroundColor: COLORS.green, borderRadius: 25, padding: 22, minHeight: 220, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', gap: 10 },
   heroEyebrow: { color: '#B9F1C8', fontSize: 10, fontWeight: '900', letterSpacing: 1.3, marginBottom: 10 },
