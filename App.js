@@ -114,9 +114,9 @@ function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 
           {hasRating ? <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View> : null}
           {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% off</Text></View> : null}
         </View>
-        <Text style={[styles.productName,mobile && {fontSize:14,lineHeight:19,minHeight:38,marginTop:1,marginBottom:5}]} numberOfLines={2}>{product.name}</Text>
+        <Text style={[styles.productName,mobile && {fontSize:14,lineHeight:19,minHeight:0,marginTop:1,marginBottom:0}]} numberOfLines={2}>{product.name}</Text>
       </Pressable>
-      <View style={[styles.productBottom,mobile && {marginTop:4,gap:7,alignItems:'center'}]}>
+      <View style={[styles.productBottom,mobile && {marginTop:1,gap:7,alignItems:'center'}]}>
         <View style={[styles.priceRow,mobile && {flexDirection:'column',alignItems:'flex-start',gap:1,flexWrap:'nowrap'}]}>
           <Text style={[styles.price,mobile && {fontSize:15,lineHeight:20}]} numberOfLines={1}>{money(sellingPrice)}</Text>
           {discount > 0 ? <Text style={styles.originalPrice} numberOfLines={1}>{money(originalPrice)}</Text> : null}
