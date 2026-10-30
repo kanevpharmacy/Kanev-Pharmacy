@@ -189,6 +189,7 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [cartStorageReady, setCartStorageReady] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const pageScrollRef = useRef(null);
   const [selectedProductImageIndex, setSelectedProductImageIndex] = useState(0);
   const [productImageHoverZoom, setProductImageHoverZoom] = useState(false);
   const [selectedProductQuantity, setSelectedProductQuantity] = useState(1);
@@ -269,6 +270,11 @@ export default function App() {
 
   // Clicking anywhere outside the navigation dismisses a click-pinned menu, while
   // allowing the clicked page control to receive its normal click as well.
+  useEffect(() => {
+    // Start each customer page at the top instead of retaining the previous screen's scroll position.
+    pageScrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [tab, selectedProduct?.id]);
+
   useEffect(() => {
     if (Platform.OS !== 'web' || !desktopMenuRootId || typeof document === 'undefined') return undefined;
     const handleOutsidePointerDown = (event) => {
@@ -1647,7 +1653,7 @@ export default function App() {
           {['Medicines', 'Personal Care', 'Wellness', 'Baby Care', 'Skincare', 'Medical Supplies'].map(label => <Pressable key={label} onPress={() => { setSelectedProduct(null); setSelectedProductImageIndex(0); setCategory(label); setTab('Shop'); }} style={styles.tmNavLink}><Text style={styles.tmNavText}>{label}</Text></Pressable>)}
         </ScrollView>}
       </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} keyboardShouldPersistTaps="handled">
         {renderPage()}
         <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16 }]} >
           <View style={styles.footerTop}>
