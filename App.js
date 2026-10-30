@@ -1384,10 +1384,10 @@ export default function App() {
           <View style={styles.authSecureNote}><Ionicons name="shield-checkmark-outline" size={17} color="#0B6549"/><Text style={styles.authSecureText}>Your account details are protected by secure sign-in.</Text></View>
         </View>
       </View> : <>
-        <View style={[styles.myAccountHero, isDesktop && styles.myAccountHeroDesktop]}>
-          <View style={styles.myAccountGreetingRow}>
-            <View style={styles.myAccountAvatarWrap}>
-              <Pressable onPress={updateProfilePhoto} disabled={avatarBusy} accessibilityRole="button" accessibilityLabel="Change profile photo" style={[styles.myAccountAvatar, avatarBusy && { opacity: 0.6 }]}>
+        <View style={[styles.myAccountHero, isDesktop && styles.myAccountHeroDesktop, !isDesktop && {padding:15,borderRadius:18,marginBottom:14}]}>
+          <View style={[styles.myAccountGreetingRow,!isDesktop&&{flexWrap:'nowrap',alignItems:'center',gap:10}]}>
+            <View style={[styles.myAccountAvatarWrap,!isDesktop&&{minWidth:58,marginRight:0}]}>
+              <Pressable onPress={updateProfilePhoto} disabled={avatarBusy} accessibilityRole="button" accessibilityLabel="Change profile photo" style={[styles.myAccountAvatar,!isDesktop&&{width:54,height:54,borderRadius:27,borderWidth:2}, avatarBusy && { opacity: 0.6 }]}>
                 {session.user.user_metadata?.avatar_url
                   ? <Image source={{ uri: session.user.user_metadata.avatar_url }} style={styles.myAccountAvatarPhoto} resizeMode="cover" />
                   : <Text style={styles.myAccountAvatarText}>{(session.user.user_metadata?.full_name || session.user.email || 'K').trim().charAt(0).toUpperCase()}</Text>}
@@ -1396,10 +1396,10 @@ export default function App() {
               <Pressable onPress={updateProfilePhoto} disabled={avatarBusy}><Text style={styles.myAccountAvatarAction}>{avatarBusy ? 'Saving photo…' : session.user.user_metadata?.avatar_url ? 'Change photo' : 'Add photo'}</Text></Pressable>
               {session.user.user_metadata?.avatar_url ? <Pressable onPress={removeProfilePhoto} disabled={avatarBusy}><Text style={styles.myAccountAvatarRemove}>Remove</Text></Pressable> : null}
             </View>
-            <View style={{flex:1,minWidth:0}}><Text style={styles.myAccountEyebrow}>KANEV PHARMACY · MY ACCOUNT</Text><Text style={styles.myAccountWelcome}>Hello, {session.user.user_metadata?.full_name?.trim()?.split(/\s+/)[0] || 'there'}</Text><Text style={styles.myAccountSub}>Manage your account and pharmacy services</Text></View>
-            <Pressable style={styles.myAccountSignOut} onPress={signOut}><Ionicons name="log-out-outline" size={17} color="#B42332"/><Text style={styles.myAccountSignOutText}>Sign out</Text></Pressable>
+            <View style={{flex:1,minWidth:0}}><Text style={[styles.myAccountEyebrow,!isDesktop&&{fontSize:8,letterSpacing:1,marginBottom:3}]}>KANEV PHARMACY · MY ACCOUNT</Text><Text style={[styles.myAccountWelcome,!isDesktop&&{fontSize:20,lineHeight:24}]}>Hello, {session.user.user_metadata?.full_name?.trim()?.split(/\s+/)[0] || 'there'}</Text><Text style={[styles.myAccountSub,!isDesktop&&{fontSize:10,lineHeight:14,marginTop:2}]}>Manage your account and pharmacy services</Text></View>
+            <Pressable style={[styles.myAccountSignOut,!isDesktop&&{paddingHorizontal:9,paddingVertical:8,marginLeft:0,borderRadius:9}]} onPress={signOut}><Ionicons name="log-out-outline" size={17} color="#B42332"/><Text style={styles.myAccountSignOutText}>Sign out</Text></Pressable>
           </View>
-          <View style={styles.myAccountTrustLine}><Ionicons name="shield-checkmark-outline" size={16} color="#D4F879"/><Text style={styles.myAccountTrustText}>Your Kanev account, handled securely</Text><Text style={styles.myAccountTagline}>Closer to Your Health</Text></View>
+          <View style={[styles.myAccountTrustLine,!isDesktop&&{marginTop:12,paddingTop:10,gap:6}]}><Ionicons name="shield-checkmark-outline" size={16} color="#D4F879"/><Text style={[styles.myAccountTrustText,!isDesktop&&{fontSize:10} ]}>Your Kanev account, handled securely</Text>{isDesktop && <Text style={styles.myAccountTagline}>Closer to Your Health</Text>}</View>
         </View>
         <View style={[styles.myAccountLayout, isDesktop && styles.myAccountLayoutDesktop]}>
           <View style={[styles.myAccountSidebar,isDesktop&&{width:250,flexShrink:0}]}>
@@ -1684,7 +1684,7 @@ export default function App() {
           {['Medicines', 'Personal Care', 'Wellness', 'Baby Care', 'Skincare', 'Medical Supplies'].map(label => <Pressable key={label} onPress={() => { setSelectedProduct(null); setSelectedProductImageIndex(0); setCategory(label); setTab('Shop'); }} style={styles.tmNavLink}><Text style={styles.tmNavText}>{label}</Text></Pressable>)}
         </ScrollView>}
       </View>}
-{!isDesktop && tab !== 'Shop' && <View style={styles.mobileHeaderSearchWrap}>
+{!isDesktop && tab !== 'Shop' && tab !== 'Account' && <View style={styles.mobileHeaderSearchWrap}>
         <View style={styles.mobileHeaderSearch}>
           <Ionicons name="search-outline" size={19} color={COLORS.muted}/>
           <TextInput value={query} onFocus={() => setHeaderSearchFocused(true)} onBlur={() => setTimeout(() => setHeaderSearchFocused(false), 350)} onChangeText={setQuery} onSubmitEditing={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}} placeholder="" placeholderTextColor="#7C8A84" style={styles.mobileHeaderSearchInput} returnKeyType="search" />
@@ -1709,7 +1709,7 @@ export default function App() {
           <Pressable style={styles.headerSearchAll} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}}><Text style={styles.headerSearchAllText}>View all search results</Text><Ionicons name="arrow-forward" size={15} color={COLORS.blue}/></Pressable>
         </View>}
       </View>}
-      {!isDesktop && <View style={styles.tmNavSticky}>
+      {!isDesktop && tab !== 'Account' && <View style={styles.tmNavSticky}>
         {storeMenuItems.length ? <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tmNav} keyboardShouldPersistTaps="handled">
             {storeMenuItems.filter(item => !item.parent_id).map(item => {
