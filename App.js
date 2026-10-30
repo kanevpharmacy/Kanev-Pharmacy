@@ -182,7 +182,6 @@ export default function App() {
   const [headerSearchFocused, setHeaderSearchFocused] = useState(false);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [mobileHeaderMenuOpen, setMobileHeaderMenuOpen] = useState(false);
-  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [deliveryModalVisible, setDeliveryModalVisible] = useState(false);
   const [deliverySearch, setDeliverySearch] = useState('');
@@ -1704,40 +1703,14 @@ export default function App() {
           <View style={styles.footerBottom}><Text style={styles.footerBottomText}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text><Text style={styles.footerBottomText}>Please use medicines responsibly and follow professional advice.</Text></View>
         </View>
       </ScrollView>
-      {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
-        <Pressable onPress={()=>{}} style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
-          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-            <View><Text style={{fontSize:16,fontWeight:'900',color:COLORS.ink}}>Healthcare services</Text><Text style={{fontSize:11,color:COLORS.muted,marginTop:3}}>What can we help you with?</Text></View>
-            <Pressable onPress={()=>setMobileServicesOpen(false)} style={{width:32,height:32,borderRadius:16,backgroundColor:'#F1F7F3',alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={19} color={COLORS.green}/></Pressable>
-          </View>
-          <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
-            {[
-              {title:'Upload prescription',sub:'Send a prescription for review',icon:'document-text-outline',color:'#087F50',run:()=>{setHealthDocType('prescription');if(session?.user)setTab('HealthDocuments');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
-              {title:'Lab results',sub:'Upload and view lab documents',icon:'flask-outline',color:'#1769FF',run:()=>{setHealthDocType('lab_result');if(session?.user)setTab('HealthDocuments');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
-              {title:'Delivery & tracking',sub:'View your order progress',icon:'bicycle-outline',color:'#087F50',run:()=>{if(session?.user){setAccountSection('orders');setTab('Account');}else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
-              {title:'Health services',sub:'Health information and support',icon:'heart-outline',color:'#1769FF',run:()=>{setTab('Account');setAccountSection('support');}},
-            ].map(item=><Pressable key={item.title} onPress={()=>{setMobileServicesOpen(false);setSelectedProduct(null);item.run();}} style={{width:'48%',flexGrow:1,minHeight:94,borderRadius:13,borderWidth:1,borderColor:'#E1EBE5',backgroundColor:'#FBFDFC',padding:11,gap:6}}>
-              <View style={{width:34,height:34,borderRadius:11,backgroundColor:item.color==='#1769FF'?'#EAF2FF':'#E7F5ED',alignItems:'center',justifyContent:'center'}}><Ionicons name={item.icon} size={19} color={item.color}/></View>
-              <Text style={{fontSize:12,fontWeight:'900',color:COLORS.ink}}>{item.title}</Text><Text style={{fontSize:10,color:COLORS.muted,lineHeight:14}}>{item.sub}</Text>
-            </Pressable>)}
-          </View>
-        </Pressable>
-      </Pressable>}
       <View style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
-        {[
-          {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');}},
-          {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{setSelectedProduct(null);setCategory('All');setTab('Shop');}},
-          {name:'Orders',icon:'receipt-outline',active:tab==='Account'&&accountSection==='orders',run:()=>{setSelectedProduct(null);if(session?.user){setAccountSection('orders');setTab('Account');}else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
-          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,run:()=>setMobileServicesOpen(v=>!v)},
-          {name:'Account',icon:'person-outline',active:tab==='Account'&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else{setTab('Account');setAccountSection('profile');}}},
-        ].map(item=>(
-          <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
-            <View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}>
-              <Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/>
-              {item.name==='Orders'&&orders.length>0?<View style={styles.tabBadge}/>:null}
-              {item.name==='Services'&&<View style={{position:'absolute',right:1,top:1,width:6,height:6,borderRadius:3,backgroundColor:COLORS.blue}}/>}
+        {[['Home', 'home-outline'], ['Shop', 'grid-outline'], ['Cart', 'bag-handle-outline'], ['Account', 'person-outline']].map(([name, icon]) => (
+          <Pressable key={name} onPress={() => { setSelectedProduct(null); if (name === 'Account' && !session?.user) { setAuthMode('signin'); setAuthModalVisible(true); } else setTab(name); }} style={styles.tabItem}>
+            <View style={[styles.tabIconWrap, tab === name && styles.tabIconWrapActive]}>
+              <Ionicons name={icon} size={21} color={tab === name ? COLORS.green : COLORS.muted} />
+              {name === 'Cart' && cartCount > 0 && <View style={styles.tabBadge} />}
             </View>
-            <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
+            <Text style={[styles.tabLabel, tab === name && styles.tabLabelActive]}>{name}</Text>
           </Pressable>
         ))}
       </View>
@@ -2131,7 +2104,7 @@ const styles = StyleSheet.create({
   footerBrand: { color: COLORS.green, fontWeight: '900', fontSize: 14 },
   footerTagline: { color: COLORS.blue, fontWeight: '700', fontSize: 11, marginTop: 3 },
   footerSmall: { color: COLORS.muted, fontSize: 10, textAlign: 'center', lineHeight: 15, marginTop: 10, maxWidth: 340 },
-  tabBar: { minHeight: 68, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-around', paddingTop: 6, paddingBottom: Platform.OS === 'ios' ? 12 : 5, elevation: 12, shadowColor: '#123B2B', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: -3 } },
+  tabBar: { minHeight: 66, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-around', paddingTop: 7, paddingBottom: Platform.OS === 'ios' ? 12 : 5 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   tabIconWrap: { width: 42, height: 31, borderRadius: 11, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   tabIconWrapActive: { backgroundColor: COLORS.pale },
