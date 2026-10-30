@@ -450,11 +450,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (supabaseConfigured) {
-      supabase.from('app_login_branding').select('*').eq('id', 'default').maybeSingle()
-        .then(({ data }) => { if (data) setLoginBranding({ ...DEFAULT_LOGIN_BRANDING, ...data }); })
-        .catch(() => {});
-    }
     loadCatalogue();
     if (supabaseConfigured) { supabase.from('store_banners').select('*').eq('is_active', true).order('sort_order').then(({ data, error }) => { if (!error && data) { const now = Date.now(); setStoreBanners(data.filter(x => (!x.starts_at || new Date(x.starts_at).getTime() <= now) && (!x.ends_at || new Date(x.ends_at).getTime() >= now))); } }); }
     if (supabaseConfigured) { supabase.from('store_menu_items').select('id,label,node_type,parent_id,sort_order,is_active,destination_type,destination_value').eq('is_active', true).order('sort_order').then(({data,error}) => { if (!error && data) setStoreMenuItems(data); }); }
@@ -466,8 +461,16 @@ export default function App() {
     // This prevents the customer home page flashing briefly when an admin refreshes.
     (async () => {
       try {
+        // Fetch branding alongside session restoration so the configured startup
+        // logo is ready before the existing startup screen is rendered.
+        const brandingPromise = supabase.from('app_login_branding').select('*').eq('id', 'default').maybeSingle()
+          .then(({ data: brandingData }) => brandingData || null)
+          .catch(() => null);
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
+        const brandingData = await brandingPromise;
+        if (!active) return;
+        if (brandingData) setLoginBranding({ ...DEFAULT_LOGIN_BRANDING, ...brandingData });
         const initialSession = data.session || null;
         if (!active) return;
         setSession(initialSession);
