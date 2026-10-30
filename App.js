@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   SafeAreaView, View, Text, TextInput, ScrollView, Pressable, Animated,
-  Image, ImageBackground, StyleSheet, StatusBar, Platform, Modal, Linking, useWindowDimensions
+  Image as NativeImage, ImageBackground, StyleSheet, StatusBar, Platform, Modal, Linking, useWindowDimensions
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,16 @@ import { supabase, supabaseConfigured } from './src/lib/supabase';
 import KanevAdminPortal from './KanevAdminPortal';
 import KanevPharmacySymbol from './assets/kanev-pharmacy-symbol.png';
 import KanevNoticeModal from './src/components/KanevNoticeModal';
+
+// Consistent image loading across web and native. Web images are lazy-loaded
+// and decoded asynchronously; native images use progressive rendering and a
+// short fade so scrolling catalogues do not block the first screen.
+function Image({ loading, ...props }) {
+  const webProps = Platform.OS === 'web'
+    ? { loading: loading || 'lazy', decoding: 'async' }
+    : { fadeDuration: 140, progressiveRenderingEnabled: true };
+  return <NativeImage {...webProps} {...props} />;
+}
 
 const money = (amount) => `K${Number(amount).toFixed(2)}`;
 
@@ -62,7 +72,7 @@ function BannerImageSlideshow({ banner, style, resizeMode = 'cover', opacity = 1
   const scale = effect === 'zoom' ? progress.interpolate({inputRange:[0,1],outputRange:[1.12,1]}) : effect === 'pop' ? progress.interpolate({inputRange:[0,1],outputRange:[0.82,1]}) : 1;
   const imageOpacity = effect === 'fade' ? progress.interpolate({inputRange:[0,1],outputRange:[0,opacity]}) : progress.interpolate({inputRange:[0,1],outputRange:[opacity*0.72,opacity]});
   return <View pointerEvents="none" style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }, style]}>
-    <Animated.Image source={{ uri: optimizedImageUrl(images[index % images.length], 1400, 78, 'cover') }} resizeMode={banner?.image_fit || resizeMode} style={{ width: '100%', height: '100%', opacity:imageOpacity, transform:[{translateX},{translateY},{scale}] }} />
+    <Animated.Image loading="eager" source={{ uri: optimizedImageUrl(images[index % images.length], 1400, 78, 'cover') }} resizeMode={banner?.image_fit || resizeMode} style={{ width: '100%', height: '100%', opacity:imageOpacity, transform:[{translateX},{translateY},{scale}] }} />
     {images.length > 1 && showDots ? <View style={{ position: 'absolute', bottom: 9, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5 }}>{images.map((_, i) => <View key={`${banner?.id || 'banner'}-dot-${i}`} style={{ width: i === index ? 17 : 6, height: 6, borderRadius: 4, backgroundColor: i === index ? '#FFFFFF' : 'rgba(255,255,255,0.65)', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.18)' }} />)}</View> : null}
   </View>;
 }
