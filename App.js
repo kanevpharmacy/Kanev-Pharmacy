@@ -190,6 +190,7 @@ export default function App() {
   const [cartStorageReady, setCartStorageReady] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedProductImageIndex, setSelectedProductImageIndex] = useState(0);
+  const [selectedProductQuantity, setSelectedProductQuantity] = useState(1);
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '', deliveryNotes: '' });
   const [orderType, setOrderType] = useState('Delivery');
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -533,10 +534,11 @@ export default function App() {
     return groups;
   }, {}));
 
-  const addToCart = (product) => {
+  const addToCart = (product, quantity = 1) => {
+    const amount = Math.max(1, Math.floor(Number(quantity) || 1));
     if (product.stock !== undefined && product.stock < 1) return notify('Out of stock', 'This product is currently unavailable.');
     const inCart = cart.find(item => item.id === product.id);
-    if (product.stock !== undefined && inCart && inCart.qty >= product.stock) return notify('Stock limit reached', 'You cannot add more than the available stock.');
+    if (product.stock !== undefined && inCart && inCart.qty + amount > product.stock) return notify('Stock limit reached', 'You cannot add more than the available stock.');
     if (product.prescriptionRequired) {
       const msg = 'This item requires pharmacy review and a valid prescription before it can be dispensed. Please contact Kanev Pharmacy to continue.';
       notify('Prescription required', msg, 'warning');
@@ -546,8 +548,8 @@ export default function App() {
       const existing = prev.find(item => item.id === product.id);
       const addedAt = Date.now();
       return existing
-        ? prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1, addedAt } : item)
-        : [...prev, { ...product, qty: 1, addedAt }];
+        ? prev.map(item => item.id === product.id ? { ...item, qty: item.qty + amount, addedAt } : item)
+        : [...prev, { ...product, qty: amount, addedAt }];
     });
   };
 
@@ -1499,26 +1501,42 @@ export default function App() {
     if (selectedProduct && tab === 'Shop') return (
       <View style={styles.detailWrap}>
         <Pressable onPress={() => setSelectedProduct(null)} style={styles.backButton}><Ionicons name="arrow-back" size={21} color={COLORS.green} /><Text style={styles.backText}>Back to shop</Text></Pressable>
-        <View style={{flexDirection:isDesktop?'row':'column',gap:24,alignItems:'stretch'}}>
-          <View style={{flex:isDesktop?1.05:undefined,minWidth:0,flexDirection:isDesktop?'row':'column',gap:12}}>
+        <View style={{flexDirection:isDesktop?'row':'column',gap:22,alignItems:'flex-start'}}>
+          <View style={{flex:isDesktop?1.05:undefined,minWidth:0,width:isDesktop?undefined:'100%',flexDirection:isDesktop?'row':'column',gap:12}}>
             <View style={{flexDirection:isDesktop?'column':'row',gap:8,flexWrap:'wrap',justifyContent:'flex-start'}}>
               {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).map((url,index)=><Pressable key={url+index} onPress={()=>setSelectedProductImageIndex(index)} style={{width:68,height:68,borderRadius:9,borderWidth:selectedProductImageIndex===index?2:1,borderColor:selectedProductImageIndex===index?COLORS.blue:COLORS.border,backgroundColor:'#F7FAF8',padding:3,overflow:'hidden'}}><Image source={{uri:optimizedImageUrl(url,180,78)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/></Pressable>)}
             </View>
-            <View style={{flex:1,minHeight:isDesktop?390:280,borderWidth:1,borderColor:COLORS.border,borderRadius:14,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12}}>
+            <View style={{flex:1,minWidth:0,height:isDesktop?390:300,borderWidth:1,borderColor:COLORS.border,borderRadius:10,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12}}>
               {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length ? <Image source={{uri:optimizedImageUrl((Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[]))[Math.min(selectedProductImageIndex,(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length-1)],1000,85)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/> : <Ionicons name={selectedProduct.icon||'medical-outline'} size={76} color={COLORS.green}/>}
             </View>
           </View>
-          <View style={{flex:1.25,minWidth:0,gap:10}}>
-            <Text style={styles.productCategory}>{selectedProduct.category}</Text>
+          <View style={{flex:isDesktop?1.35:undefined,minWidth:0,width:isDesktop?undefined:'100%',gap:12,paddingTop:2}}>
             <Text style={styles.detailTitle}>{selectedProduct.name}</Text>
-            {selectedProduct.brand?<Text style={{fontSize:13,color:COLORS.muted,fontWeight:'700'}}>By {selectedProduct.brand}</Text>:null}
-            <View style={{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'}}><Text style={{backgroundColor:'#12A5DC',color:'#FFFFFF',fontWeight:'900',paddingHorizontal:9,paddingVertical:4,borderRadius:6}}>{Number(selectedProduct.rating||0).toFixed(1)} ★</Text><Text style={{fontSize:12,color:COLORS.muted}}>Product rating</Text></View>
-            <Text style={styles.detailPrice}>{money(selectedProduct.price)} {selectedProduct.original_price>selectedProduct.price?<Text style={{fontSize:14,color:'#98A39D',textDecorationLine:'line-through'}}>{money(selectedProduct.original_price)}</Text>:null}</Text>
-            {selectedProduct.discount_percent>0?<Text style={{alignSelf:'flex-start',backgroundColor:'#FFF0E5',color:'#E66B16',fontSize:11,fontWeight:'900',paddingHorizontal:9,paddingVertical:5,borderRadius:5}}>{selectedProduct.discount_percent}% Off</Text>:null}
-            <Text style={{fontSize:12,color:COLORS.muted}}>Availability: {selectedProduct.stock>0?'In Stock':'Check availability'}</Text>
-            <Text style={styles.detailDescription}>{selectedProduct.description||'Product information will be updated by the pharmacy.'}</Text>
-            <Text style={styles.detailNotice}>Availability and final dispensing decisions are subject to pharmacy confirmation.</Text>
-            <ActionButton title={selectedProduct.prescriptionRequired?'Prescription review required':'Add to cart'} onPress={()=>addToCart(selectedProduct)}/>
+            {selectedProduct.brand?<Text style={{fontSize:13,color:'#263238',fontWeight:'800'}}>By {String(selectedProduct.brand).toUpperCase()}</Text>:null}
+            <View style={{flexDirection:'row',alignItems:'center',gap:9,flexWrap:'wrap'}}><Text style={{backgroundColor:'#12A5DC',color:'#FFFFFF',fontWeight:'900',paddingHorizontal:9,paddingVertical:4,borderRadius:6}}>{Number(selectedProduct.rating||0).toFixed(0)} ★</Text><Text style={{fontSize:13,color:'#E65B5B'}}>Ratings & Reviews</Text></View>
+            {selectedProduct.pack_size?<Text style={{fontSize:13,fontWeight:'800',color:COLORS.ink}}>{selectedProduct.pack_size}</Text>:null}
+            <View style={{flexDirection:'row',alignItems:'center',gap:22,marginTop:8,flexWrap:'wrap'}}>
+              <View style={{alignItems:'center',gap:4}}><Ionicons name="shield-checkmark-outline" size={18} color={COLORS.blue}/><Text style={{fontSize:11,color:COLORS.muted}}>Trusted by Millions</Text></View>
+              <View style={{alignItems:'center',gap:4}}><Ionicons name="ribbon-outline" size={18} color={COLORS.blue}/><Text style={{fontSize:11,color:COLORS.muted}}>100% Original Products</Text></View>
+            </View>
+            <View style={{gap:7,marginTop:8}}>
+              {(selectedProduct.benefits||[]).length?selectedProduct.benefits.map((benefit,index)=><View key={index} style={{flexDirection:'row',gap:10,alignItems:'flex-start'}}><Text style={{color:COLORS.muted}}>•</Text><Text style={{fontSize:14,color:COLORS.muted,flex:1,lineHeight:21}}>{benefit}</Text></View>):selectedProduct.description?<Text style={styles.detailDescription}>{selectedProduct.description}</Text>:null}
+            </View>
+          </View>
+          <View style={{flex:isDesktop?0.9:undefined,width:isDesktop?undefined:'100%',minWidth:0,borderWidth:1,borderColor:COLORS.border,borderRadius:9,padding:16,gap:12,backgroundColor:'#FFFFFF'}}>
+            <View style={{alignSelf:'flex-start',backgroundColor:selectedProduct.stock>0?'#DDF8E8':'#FFF0E5',borderRadius:20,paddingHorizontal:10,paddingVertical:5}}><Text style={{fontSize:11,fontWeight:'800',color:selectedProduct.stock>0?'#16834B':'#C45B19'}}>Stock : {selectedProduct.stock>0?'In Stock':'Out of Stock'}</Text></View>
+            <View style={{flexDirection:'row',alignItems:'baseline',gap:8,flexWrap:'wrap'}}><Text style={{fontSize:23,fontWeight:'900',color:'#171717'}}>{money(selectedProduct.price)}</Text>{selectedProduct.original_price>selectedProduct.price?<Text style={{fontSize:15,color:'#9AA3AA',textDecorationLine:'line-through'}}>{money(selectedProduct.original_price)}</Text>:null}</View>
+            {selectedProduct.discount_percent>0?<Text style={{alignSelf:'flex-start',backgroundColor:'#FF7417',color:'#FFFFFF',fontSize:11,fontWeight:'900',paddingHorizontal:9,paddingVertical:5,borderRadius:5}}>{selectedProduct.discount_percent}% Off</Text>:null}
+            <Text style={{fontSize:13,color:COLORS.muted}}>Inclusive of all taxes</Text>
+            <View style={{flexDirection:'row',alignItems:'center',gap:0}}>
+              <Pressable onPress={()=>setSelectedProductQuantity(q=>Math.max(1,q-1))} style={{width:38,height:40,borderWidth:1,borderColor:COLORS.border,borderTopLeftRadius:6,borderBottomLeftRadius:6,alignItems:'center',justifyContent:'center'}}><Ionicons name="remove" size={17} color={COLORS.ink}/></Pressable>
+              <View style={{width:48,height:40,borderTopWidth:1,borderBottomWidth:1,borderColor:COLORS.border,alignItems:'center',justifyContent:'center'}}><Text style={{fontWeight:'800',color:COLORS.ink}}>{selectedProductQuantity}</Text></View>
+              <Pressable onPress={()=>setSelectedProductQuantity(q=>Math.min(selectedProduct.stock>0?selectedProduct.stock:99,q+1))} style={{width:38,height:40,borderWidth:1,borderColor:COLORS.border,borderTopRightRadius:6,borderBottomRightRadius:6,alignItems:'center',justifyContent:'center'}}><Ionicons name="add" size={17} color={COLORS.ink}/></Pressable>
+              <View style={{flex:1}}/>
+              <Pressable disabled={selectedProduct.stock<1} onPress={()=>addToCart(selectedProduct,selectedProductQuantity)} style={{height:40,paddingHorizontal:15,borderRadius:6,backgroundColor:COLORS.blue,alignItems:'center',justifyContent:'center',opacity:selectedProduct.stock<1?0.5:1}}><Text style={{color:'#FFFFFF',fontSize:13,fontWeight:'900'}}>Add to Cart</Text></Pressable>
+            </View>
+            <Pressable disabled={selectedProduct.stock<1} onPress={()=>{addToCart(selectedProduct,selectedProductQuantity);setTab('Cart');}} style={{height:42,borderWidth:1.5,borderColor:COLORS.blue,borderRadius:6,alignItems:'center',justifyContent:'center',opacity:selectedProduct.stock<1?0.5:1}}><Text style={{color:COLORS.blue,fontWeight:'900',fontSize:13}}>Buy Now</Text></Pressable>
+            <View style={{borderTopWidth:1,borderColor:COLORS.border,paddingTop:12,gap:5}}><Text style={{fontSize:13,fontWeight:'800',color:COLORS.ink}}>Category: <Text style={{color:COLORS.blue,fontWeight:'500'}}>{selectedProduct.category}</Text></Text><Text style={{fontSize:12,color:COLORS.muted}}>Availability and final dispensing decisions are subject to pharmacy confirmation.</Text></View>
           </View>
         </View>
         <View style={{marginTop:28,borderTopWidth:1,borderColor:COLORS.border,paddingTop:20}}>
