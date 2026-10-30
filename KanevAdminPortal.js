@@ -133,7 +133,7 @@ export default function KanevAdminPortal(){
   setLoading(true);
   try{
     const {data:brandRow}=await supabase.from('app_login_branding').select('*').eq('id','default').maybeSingle();
-    if(brandRow)setBranding({...defaultBranding,...brandRow});
+    if(brandRow && !homepageSelectionDirty.current)setBranding({...defaultBranding,...brandRow});
     // Use the real schema column `fulfilment` (not `fulfilment_method`). A single
     // missing column makes PostgREST reject the whole orders query and hides every order.
     const [o,p,c,cat]=await Promise.all([
