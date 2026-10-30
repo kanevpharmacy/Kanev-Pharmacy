@@ -97,7 +97,7 @@ function ActionButton({ title, onPress, secondary = false, disabled = false }) {
   );
 }
 
-function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 145, imageResizeMode = 'contain' }) {
+function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 145, imageResizeMode = 'contain', imageBrighten = false }) {
   const originalPrice = Number(product.original_price || product.original_price_zmw || 0);
   const sellingPrice = Number(product.price || product.price_zmw || 0);
   const discount = originalPrice > sellingPrice && originalPrice > 0
@@ -109,6 +109,7 @@ function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
         <View style={[styles.productImage, { backgroundColor: '#F6F9F7', height: imageHeight }]}>
           {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode={imageResizeMode} /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
+          {imageBrighten ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.12)' }} /> : null}
           <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View>
           {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% Off</Text></View> : null}
         </View>
@@ -1020,7 +1021,7 @@ export default function App() {
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Popular items</Text><Text style={styles.homeSectionSub}>Browse available pharmacy products</Text></View><Pressable onPress={() => setTab('Shop')}><Text style={styles.link}>View all  →</Text></Pressable></View>
       {catalogueLoading ? <View style={styles.homeLoading}><Text style={styles.smallNote}>Loading live products…</Text></View> : null}
       {!catalogueLoading && !products.length && catalogueSource !== 'error' ? <View style={styles.homeLoading}><Ionicons name="basket-outline" size={30} color={COLORS.muted}/><Text style={styles.supportTitle}>No products published yet</Text><Text style={styles.supportText}>The pharmacy catalogue will appear here when products are available.</Text></View> : null}
-      <View style={styles.productGrid}>{products.slice(0,10).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} imageResizeMode="cover" onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View>
+      <View style={styles.productGrid}>{products.slice(0,10).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} imageResizeMode="cover" imageBrighten onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View>
       {products.length > 10 ? <><View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>More to explore</Text><Text style={styles.homeSectionSub}>Healthcare and personal care favourites</Text></View></View><View style={styles.productGrid}>{products.slice(10,20).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View></> : null}
       {!catalogueLoading && catalogueSource === 'error' ? <View style={styles.homeLoading}><Text style={styles.supportTitle}>Catalogue unavailable</Text><ActionButton title="Retry" secondary onPress={loadCatalogue}/></View> : null}
       <View style={styles.marketPanel}>
