@@ -351,12 +351,23 @@ export default function App() {
     try {
       // Keep the core products query independent from PostgREST relationship metadata.
       // A missing/renamed FK relationship must not make the entire public catalogue fail.
-      const { data, error } = await supabase
-        .from('products')
-        .select('id,name,slug,description,brand,image_url,price_zmw,original_price_zmw,rating,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id,image_urls')
+      const productColumns = 'id,name,slug,description,brand,image_url,price_zmw,original_price_zmw,rating,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id';
+      // The image gallery migration may not have been applied yet. Keep the
+      // public catalogue working with the legacy primary image until it is.
+      let productQuery = await supabase.from('products')
+        .select(productColumns + ',image_urls')
         .eq('is_active', true)
         .order('is_featured', { ascending: false })
         .order('name');
+      if (productQuery.error && /image_urls|column .* does not exist|42703/i.test([productQuery.error.message,productQuery.error.details,productQuery.error.code].join(' '))) {
+        console.warn('[Kanev catalogue] image_urls migration is pending; loading primary product images.');
+        productQuery = await supabase.from('products')
+          .select(productColumns)
+          .eq('is_active', true)
+          .order('is_featured', { ascending: false })
+          .order('name');
+      }
+      const { data, error } = productQuery;
       if (error) throw error;
 
       const [categoryResult, linkResult, menuResult] = await Promise.all([
