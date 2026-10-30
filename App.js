@@ -972,15 +972,15 @@ export default function App() {
 
   const Header = () => (
     <View style={[styles.header, isDesktop && styles.headerDesktop, !isDesktop && styles.headerCompact]}>
-      <Pressable style={styles.brandRow} onPress={() => { setTab('Home'); setSelectedProduct(null); }} accessibilityRole="button" accessibilityLabel="Kanev Pharmacy home">
-        <View style={styles.headerLogoHolder}>
-          {loginBranding.header_logo_url ? <Image source={{ uri: optimizedImageUrl(loginBranding.header_logo_url, 240, 75) }} style={styles.headerLogoImage} resizeMode="contain" /> : <>
-            <View style={styles.logoMark}><Ionicons name="leaf" size={21} color="#FFFFFF" /><View style={styles.logoPlus}><Ionicons name="add" size={13} color={COLORS.green} /></View></View>
+      <Pressable style={[styles.brandRow, !isDesktop && {flex:1,minWidth:0,gap:9}]} onPress={() => { setTab('Home'); setSelectedProduct(null); }} accessibilityRole="button" accessibilityLabel="Kanev Pharmacy home">
+        <View style={[styles.headerLogoHolder,!isDesktop&&{width:43,height:43}]}>
+          {loginBranding.header_logo_url ? <Image source={{ uri: optimizedImageUrl(loginBranding.header_logo_url, 180, 60) }} style={[styles.headerLogoImage,!isDesktop&&{width:43,height:43,borderRadius:9}]} resizeMode="contain" /> : <>
+            <View style={[styles.logoMark,!isDesktop&&{width:39,height:39,borderRadius:12}]}><Ionicons name="leaf" size={21} color="#FFFFFF" /><View style={styles.logoPlus}><Ionicons name="add" size={13} color={COLORS.green} /></View></View>
           </>}
         </View>
-        <View style={{ minWidth: 0 }}>
-          <Text numberOfLines={1} style={[styles.brandName, { color: loginBranding.brand_title_color || COLORS.green, fontSize: Math.min(Number(loginBranding.brand_title_size) || 15, 18), fontFamily: loginBranding.brand_title_font_family === 'System' ? undefined : loginBranding.brand_title_font_family }]}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
-          <Text numberOfLines={1} style={[styles.tagline, { color: loginBranding.tagline_color || COLORS.blue, fontSize: Math.min(Number(loginBranding.tagline_size) || 10, 12), fontFamily: loginBranding.tagline_font_family === 'System' ? undefined : loginBranding.tagline_font_family }]}>{loginBranding.tagline || 'Closer to Your Health'}</Text>
+        <View style={{ minWidth: 0,flexShrink:1 }}>
+          <Text numberOfLines={1} style={[styles.brandName, { color: loginBranding.brand_title_color || COLORS.green, fontSize: Math.min(Number(loginBranding.brand_title_size) || 15, isDesktop?18:15), fontFamily: loginBranding.brand_title_font_family === 'System' ? undefined : loginBranding.brand_title_font_family }]}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
+          <Text numberOfLines={1} style={[styles.tagline, { color: loginBranding.tagline_color || COLORS.blue, fontSize: Math.min(Number(loginBranding.tagline_size) || 10, isDesktop?12:10), fontFamily: loginBranding.tagline_font_family === 'System' ? undefined : loginBranding.tagline_font_family }]}>{loginBranding.tagline || 'Closer to Your Health'}</Text>
         </View>
       </Pressable>
       {isDesktop ? (
@@ -1009,10 +1009,15 @@ export default function App() {
           </Pressable>
         </View>
       ) : (
-        <Pressable style={styles.cartHeader} onPress={() => setTab('Cart')} accessibilityLabel={`Cart with ${cartCount} items`}>
-          <Ionicons name="bag-handle-outline" size={24} color={COLORS.green} />
-          {cartCount > 0 && <View style={styles.cartDot}><Text style={styles.cartDotText}>{cartCount}</Text></View>}
-        </Pressable>
+        <View style={{flexDirection:'row',alignItems:'center',gap:8,marginLeft:8}}>
+          <Pressable onPress={() => { if (session?.user) setTab('Account'); else { setAuthMode('signin'); setAuthModalVisible(true); } }} style={{width:39,height:39,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:'#F3F8F5',borderWidth:1,borderColor:'#E1EBE4'}} accessibilityLabel={session?.user?'My account':'Sign in'}>
+            <Ionicons name="person-outline" size={20} color={COLORS.green}/>
+          </Pressable>
+          <Pressable style={[styles.cartHeader,{width:cartCount>0?54:42,height:39,borderRadius:12,flexDirection:'row',gap:3,backgroundColor:COLORS.pale,borderWidth:1,borderColor:'#DCEBE1'}]} onPress={() => setTab('Cart')} accessibilityLabel={`Cart with ${cartCount} items`}>
+            <Ionicons name="bag-handle-outline" size={21} color={COLORS.green}/>
+            {cartCount > 0 && <Text style={{fontSize:11,fontWeight:'900',color:COLORS.green}}>{cartCount}</Text>}
+          </Pressable>
+        </View>
       )}
     </View>
   );
@@ -1887,7 +1892,7 @@ const styles = StyleSheet.create({
   pageContentTablet: { paddingHorizontal: 24, paddingTop: 20 },
   pageContentMobile: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 22 },
   headerDesktop: { paddingHorizontal: 32, minHeight: 82 },
-  headerCompact: { paddingHorizontal: 14, minHeight: 66 },
+  headerCompact: { paddingHorizontal: 14, minHeight: 62, paddingVertical: 8, gap: 6 },
   tabBarDesktop: { display: 'none' },
   hero: { backgroundColor: COLORS.green, borderRadius: 25, padding: 22, minHeight: 220, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', gap: 10 },
   heroEyebrow: { color: '#B9F1C8', fontSize: 10, fontWeight: '900', letterSpacing: 1.3, marginBottom: 10 },
