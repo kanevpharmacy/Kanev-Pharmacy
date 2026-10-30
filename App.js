@@ -1056,7 +1056,7 @@ export default function App() {
             const icon = CATEGORIES.find(c=>c.name.toLowerCase()===String(item.name).toLowerCase())?.icon || 'medkit-outline';
             return <Pressable key={item.id || item.name} style={styles.roundCategoryItem} onPress={()=>{setCategory(item.name);setTab('Shop')}} accessibilityRole="button" accessibilityLabel={`Shop ${item.name}`}>
               <View style={styles.roundCategoryImageWrap}>
-                {image ? <Image source={{uri:optimizedImageUrl(image, 240, 72, 'cover')}} style={styles.roundCategoryImage} resizeMode="contain" /> : <View style={[styles.roundCategoryFallback,{backgroundColor:['#E4F1CF','#E9DDF8','#F7DDF2','#DDEBFA','#FCE6DD','#E5F2E9'][i%6]}]}><Ionicons name={icon} size={37} color={COLORS.green}/></View>}
+                {image ? <Image source={{uri:optimizedImageUrl(image, 240, 72, 'cover')}} style={styles.roundCategoryImage} resizeMode="cover" /> : <View style={[styles.roundCategoryFallback,{backgroundColor:['#E4F1CF','#E9DDF8','#F7DDF2','#DDEBFA','#FCE6DD','#E5F2E9'][i%6]}]}><Ionicons name={icon} size={37} color={COLORS.green}/></View>}
               </View>
               <Text style={styles.roundCategoryLabel} numberOfLines={2}>{item.name}</Text>
             </Pressable>;
