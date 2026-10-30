@@ -138,7 +138,7 @@ export default function KanevAdminPortal(){
     // missing column makes PostgREST reject the whole orders query and hides every order.
     const [o,p,c,cat]=await Promise.all([
       supabase.from('orders').select('id,order_number,status,total_zmw,subtotal_zmw,delivery_fee_zmw,customer_id,customer_name,customer_phone,delivery_address,fulfilment,created_at,updated_at,delivery_status,delivery_notes,delivery_latitude,delivery_longitude,tracking_code,delivery_partner,dispatched_at,delivered_at,prescription_review_status').order('created_at',{ascending:false}).limit(100),
-      supabase.from('products').select('id,name,slug,description,brand,sku,image_url,image_urls,price_zmw,stock_quantity,low_stock_threshold,expiry_date,is_active,requires_prescription,category_id,scheduled_at,created_at,updated_at').order('created_at',{ascending:false}),
+      supabase.from('products').select('id,name,slug,description,brand,sku,image_url,price_zmw,stock_quantity,low_stock_threshold,expiry_date,is_active,requires_prescription,category_id,scheduled_at,created_at,updated_at').order('created_at',{ascending:false}),
       supabase.from('customer_profiles').select('user_id,full_name,phone,created_at').order('created_at',{ascending:false}).limit(250),
       supabase.from('categories').select('id,name,slug,is_active,image_url').order('name')
     ]);
@@ -400,7 +400,11 @@ export default function KanevAdminPortal(){
    const usedSlugs=new Set((slugRows||[]).filter(item=>item.id!==productForm.id).map(item=>String(item.slug||'').trim().toLowerCase()).filter(Boolean));
    let uniqueSlug=slugBase,slugSuffix=2;
    while(usedSlugs.has(uniqueSlug.toLowerCase()))uniqueSlug=`${slugBase}-${slugSuffix++}`;
-   const row={name:productForm.name.trim(),slug:uniqueSlug,description:(productForm.description||'').trim()||null,brand:(productForm.brand||'').trim()||null,sku:(productForm.sku||'').trim()||null,image_url:(productForm.image_url||'').trim()||null,image_urls:Array.from(new Set([...(productForm.image_urls||[]),productForm.image_url].filter(Boolean))),category_id:productForm.category_id||selectedCategoryIds[0],price_zmw:Number(productForm.price_zmw),original_price_zmw:productForm.original_price_zmw&&Number(productForm.original_price_zmw)>Number(productForm.price_zmw)?Number(productForm.original_price_zmw):null,rating:Math.min(5,Math.max(0,Number(productForm.rating||5))),stock_quantity:Math.max(0,Math.floor(Number(productForm.stock_quantity||0))),low_stock_threshold:Math.max(0,Math.floor(Number(productForm.low_stock_threshold||0))),expiry_date:String(productForm.expiry_date||'').trim()||null,is_active:isScheduled?false:(productForm.id?!!productForm.is_active:true),requires_prescription:!!productForm.requires_prescription,scheduled_at:isScheduled?new Date(Date.parse(scheduledAt)).toISOString():null,updated_at:new Date().toISOString()};
+   const row={name:productForm.name.trim(),slug:uniqueSlug,description:(productForm.description||'').trim()||null,brand:(productForm.brand||'').trim()||null,sku:(productForm.sku||'').trim()||null,image_url:(productForm.image_url||'').trim()||null,category_id:productForm.category_id||selectedCategoryIds[0],price_zmw:Number(productForm.price_zmw),original_price_zmw:productForm.original_price_zmw&&Number(productForm.original_price_zmw)>Number(productForm.price_zmw)?Number(productForm.original_price_zmw):null,rating:Math.min(5,Math.max(0,Number(productForm.rating||5))),stock_quantity:Math.max(0,Math.floor(Number(productForm.stock_quantity||0))),low_stock_threshold:Math.max(0,Math.floor(Number(productForm.low_stock_threshold||0))),expiry_date:String(productForm.expiry_date||'').trim()||null,is_active:isScheduled?false:(productForm.id?!!productForm.is_active:true),requires_prescription:!!productForm.requires_prescription,scheduled_at:isScheduled?new Date(Date.parse(scheduledAt)).toISOString():null,updated_at:new Date().toISOString()};
+   // image_urls is optional until the product gallery migration is applied.
+   // Existing single-image upload remains fully functional without that column.
+   const galleryImages=Array.from(new Set([...(productForm.image_urls||[]),productForm.image_url].filter(Boolean)));
+   row.image_url=galleryImages[0]||row.image_url;
    let savedProductId=productForm.id;
    if(productForm.id){
     const result=await supabase.from('products').update(row).eq('id',productForm.id);
