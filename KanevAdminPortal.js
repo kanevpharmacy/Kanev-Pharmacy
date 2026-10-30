@@ -138,7 +138,7 @@ export default function KanevAdminPortal(){
     // missing column makes PostgREST reject the whole orders query and hides every order.
     const [o,p,c,cat]=await Promise.all([
       supabase.from('orders').select('id,order_number,status,total_zmw,subtotal_zmw,delivery_fee_zmw,customer_id,customer_name,customer_phone,delivery_address,fulfilment,created_at,updated_at,delivery_status,delivery_notes,delivery_latitude,delivery_longitude,tracking_code,delivery_partner,dispatched_at,delivered_at,prescription_review_status').order('created_at',{ascending:false}).limit(100),
-      supabase.from('products').select('id,name,slug,description,brand,sku,image_url,price_zmw,stock_quantity,low_stock_threshold,expiry_date,is_active,requires_prescription,category_id,scheduled_at,created_at,updated_at').order('created_at',{ascending:false}),
+      supabase.from('products').select('id,name,slug,description,brand,sku,image_url,image_urls,price_zmw,stock_quantity,low_stock_threshold,expiry_date,is_active,requires_prescription,category_id,scheduled_at,created_at,updated_at').order('created_at',{ascending:false}),
       supabase.from('customer_profiles').select('user_id,full_name,phone,created_at').order('created_at',{ascending:false}).limit(250),
       supabase.from('categories').select('id,name,slug,is_active,image_url').order('name')
     ]);
