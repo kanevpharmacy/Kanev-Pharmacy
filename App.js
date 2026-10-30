@@ -1728,7 +1728,7 @@ export default function App() {
           {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');}},
           {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{setSelectedProduct(null);setCategory('All');setTab('Shop');}},
           {name:'Orders',icon:'receipt-outline',active:tab==='Account'&&accountSection==='orders',run:()=>{setSelectedProduct(null);if(session?.user){setAccountSection('orders');setTab('Account');}else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
-          {name:'Services',icon:'heart-pulse-outline',active:mobileServicesOpen,run:()=>setMobileServicesOpen(v=>!v)},
+          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,run:()=>setMobileServicesOpen(v=>!v)},
           {name:'Account',icon:'person-outline',active:tab==='Account'&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else{setTab('Account');setAccountSection('profile');}}},
         ].map(item=>(
           <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
