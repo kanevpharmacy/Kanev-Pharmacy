@@ -20,23 +20,10 @@ const money = (amount) => `K${Number(amount).toFixed(2)}`;
 
 // Request appropriately sized, compressed variants from Supabase Storage.
 // Original files remain untouched; the browser downloads smaller derivatives.
-const optimizedImageUrl = (url, width = 720, quality = 72, resize = 'contain') => {
-  if (!url || typeof url !== 'string') return url;
-  try {
-    const parsed = new URL(url);
-    const marker = '/storage/v1/object/public/';
-    if (!parsed.pathname.includes(marker)) return url;
-    const objectPath = parsed.pathname.slice(parsed.pathname.indexOf(marker) + marker.length);
-    parsed.pathname = parsed.pathname.replace(marker, '/storage/v1/render/image/public/');
-    parsed.searchParams.set('width', String(width));
-    parsed.searchParams.set('quality', String(quality));
-    parsed.searchParams.set('resize', resize);
-    // Preserve any existing version/cache-busting query parameters.
-    return parsed.toString();
-  } catch (_) {
-    return url;
-  }
-};
+// Keep the original public Storage URL. Image transformation endpoints are
+// not guaranteed to be enabled on every Supabase project; rewriting object
+// URLs can make otherwise valid product and category photos disappear.
+const optimizedImageUrl = (url) => url;
 
 // Each banner owns its own slideshow timer and selected transition effect.
 // One image stays still; multiple images rotate at a relaxed 7-second interval.
