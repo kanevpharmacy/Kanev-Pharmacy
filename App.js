@@ -1507,15 +1507,13 @@ export default function App() {
             <View style={{flexDirection:isDesktop?'column':'row',gap:8,flexWrap:'wrap',justifyContent:'flex-start'}}>
               {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).map((url,index)=><Pressable key={url+index} onPress={()=>setSelectedProductImageIndex(index)} style={{width:68,height:68,borderRadius:9,borderWidth:selectedProductImageIndex===index?2:1,borderColor:selectedProductImageIndex===index?COLORS.blue:COLORS.border,backgroundColor:'#F7FAF8',padding:3,overflow:'hidden'}}><Image source={{uri:optimizedImageUrl(url,180,78)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/></Pressable>)}
             </View>
-            <Pressable
-              onHoverIn={()=>isDesktop&&setProductImageHoverZoom(true)}
-              onHoverOut={()=>setProductImageHoverZoom(false)}
-              onContextMenu={event=>event.preventDefault()}
-              onDragStart={event=>event.preventDefault()}
-              style={{flex:1,minWidth:0,height:isDesktop?390:300,borderWidth:1,borderColor:COLORS.border,borderRadius:10,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12,overflow:'hidden',...(Platform.OS==='web'?{userSelect:'none',WebkitUserSelect:'none'}:{})}}
+            <View
+              onMouseEnter={()=>isDesktop&&setProductImageHoverZoom(true)}
+              onMouseLeave={()=>setProductImageHoverZoom(false)}
+              style={{flex:1,minWidth:0,height:isDesktop?390:300,borderWidth:1,borderColor:COLORS.border,borderRadius:10,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12,overflow:'hidden'}}
             >
-              {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length ? <Image source={{uri:optimizedImageUrl((Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[]))[Math.min(selectedProductImageIndex,(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length-1)],1600,90)}} resizeMode="contain" style={{width:'100%',height:'100%',transform:[{scale:productImageHoverZoom&&isDesktop?2.05:1}],...(Platform.OS==='web'?{userSelect:'none',WebkitUserSelect:'none'}:{})}}/> : <Ionicons name={selectedProduct.icon||'medical-outline'} size={76} color={COLORS.green}/>}
-            </Pressable>
+              {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length ? <Image onContextMenu={event=>event.preventDefault()} onDragStart={event=>event.preventDefault()} source={{uri:optimizedImageUrl((Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[]))[Math.min(selectedProductImageIndex,(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length-1)],1600,90)}} resizeMode="contain" style={{width:'100%',height:'100%',transform:[{scale:productImageHoverZoom&&isDesktop?2.05:1}],...(Platform.OS==='web'?{userSelect:'none',WebkitUserSelect:'none',WebkitUserDrag:'none'}:{})}}/> : <Ionicons name={selectedProduct.icon||'medical-outline'} size={76} color={COLORS.green}/>}
+            </View>
           </View>
           <View style={{flex:isDesktop?1.35:undefined,minWidth:0,width:isDesktop?undefined:'100%',gap:12,paddingTop:2}}>
             <Text style={styles.detailTitle}>{selectedProduct.name}</Text>
