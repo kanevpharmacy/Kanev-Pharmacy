@@ -1705,6 +1705,19 @@ export default function App() {
           </View>
           <View style={styles.footerBottom}><Text style={styles.footerBottomText}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text><Text style={styles.footerBottomText}>Please use medicines responsibly and follow professional advice.</Text></View>
         </View>
+      <View style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
+        {[
+          {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
+          {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{setSelectedProduct(null);setCategory('All');setTab('Shop');setMobileServicesOpen(false);}},
+          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,run:()=>setMobileServicesOpen(v=>!v)},
+          {name:'Account',icon:'person-outline',active:tab==='Account'&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
+        ].map(item=>(
+          <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
+            <View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>
+            <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
+          </Pressable>
+        ))}
+      </View>
       </ScrollView>
       {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
         <View style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
@@ -1725,19 +1738,6 @@ export default function App() {
           </View>
         </View>
       </Pressable>}
-      <View style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
-        {[
-          {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
-          {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{setSelectedProduct(null);setCategory('All');setTab('Shop');setMobileServicesOpen(false);}},
-          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,run:()=>setMobileServicesOpen(v=>!v)},
-          {name:'Account',icon:'person-outline',active:tab==='Account'&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
-        ].map(item=>(
-          <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
-            <View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>
-            <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
-          </Pressable>
-        ))}
-      </View>
       <Modal visible={deliveryModalVisible} transparent animationType="fade" onRequestClose={() => setDeliveryModalVisible(false)} statusBarTranslucent>
         <View style={styles.deliveryModalOverlay}>
           <Pressable style={styles.authModalBackdrop} onPress={() => setDeliveryModalVisible(false)} accessibilityLabel="Close delivery location dialog" />
