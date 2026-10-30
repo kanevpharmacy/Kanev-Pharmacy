@@ -221,7 +221,7 @@ export default function KanevAdminPortal(){
    setError('');
    const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
    if(permission?.granted===false){setError('Please allow access to your photos/files to choose a product image.');return;}
-   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[1,1],quality:0.88});
+   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[1,1],quality:0.78});
    if(result.canceled||!result.assets?.[0])return;
    const asset=result.assets[0];
    const mime=asset.mimeType||'image/jpeg';
@@ -231,7 +231,7 @@ export default function KanevAdminPortal(){
    setProductImageUploading(true);
    const response=await fetch(asset.uri); const blob=await response.blob();
    const path=`products/${session.user.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-   const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'3600'});
+   const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
    if(uploadError)throw uploadError;
    const {data}=supabase.storage.from('product-images').getPublicUrl(path);
    setProductForm(prev=>({...prev,image_url:data.publicUrl}));
@@ -245,7 +245,7 @@ export default function KanevAdminPortal(){
    setError('');
    const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
    if(permission?.granted===false){setError('Please allow access to your photos/files to choose a category image.');return;}
-   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[1,1],quality:0.88});
+   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[1,1],quality:0.78});
    if(result.canceled||!result.assets?.[0])return;
    const asset=result.assets[0]; const mime=asset.mimeType||'image/jpeg';
    const ext=(asset.fileName?.split('.').pop()||mime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
@@ -255,7 +255,7 @@ export default function KanevAdminPortal(){
    const response=await fetch(asset.uri); const blob=await response.blob();
    const owner=session?.user?.id||'admin';
    const path=`categories/${owner}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-   const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'3600'});
+   const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
    if(uploadError)throw uploadError;
    const {data}=supabase.storage.from('product-images').getPublicUrl(path);
    if(categoryId){
@@ -533,7 +533,7 @@ export default function KanevAdminPortal(){
  async function deleteMenuItem(item){if(menuItems.some(m=>m.parent_id===item.id)){setError('Move or delete this item’s submenus first.');return;}try{const {error:e}=await supabase.from('store_menu_items').delete().eq('id',item.id);if(e)throw e;await loadData();if(menuForm.id===item.id)setMenuForm({id:null,label:'',node_type:'menu',parent_id:'',sort_order:'0',is_active:true,destination_type:'category',destination_value:''});setError('Menu item deleted.');}catch(e){setError(`Menu item could not be deleted: ${e.message||'please try again.'}`);}}
  function menuTreeRows(parentId=null,depth=0){return menuItems.filter(m=>(m.parent_id||null)===parentId).sort((a,b)=>Number(a.sort_order)-Number(b.sort_order)).flatMap(item=>[{...item,_depth:depth},...menuTreeRows(item.id,depth+1)]);}
  async function saveBranding(){setBrandingSaving(true);setError('');try{const payload={...branding,id:'default',updated_at:new Date().toISOString(),updated_by:session.user.id};const {error:e}=await supabase.from('app_login_branding').upsert(payload,{onConflict:'id'});if(e)throw e;setError('Login and registration branding saved. Refresh the storefront to see changes.');}catch(e){setError('Your branding changes could not be saved. Please check your administrator permissions and try again.');}finally{setBrandingSaving(false);}}
- async function chooseBrandImage(field,label){try{setError('');const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();if(!permission.granted){setError('Allow photo-library access to choose a branding image.');return;}const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,quality:0.88});if(result.canceled||!result.assets?.[0])return;const asset=result.assets[0];const ext=(asset.fileName?.split('.').pop()||asset.mimeType?.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const path=`${field}/${session.user.id}-${Date.now()}.${ext}`;setBrandingSaving(true);const response=await fetch(asset.uri);const blob=await response.blob();const {error:uploadError}=await supabase.storage.from('login-branding').upload(path,blob,{upsert:true,contentType:asset.mimeType||'image/jpeg',cacheControl:'3600'});if(uploadError)throw uploadError;const {data}=supabase.storage.from('login-branding').getPublicUrl(path);
+ async function chooseBrandImage(field,label){try{setError('');const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();if(!permission.granted){setError('Allow photo-library access to choose a branding image.');return;}const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,quality:0.78});if(result.canceled||!result.assets?.[0])return;const asset=result.assets[0];const ext=(asset.fileName?.split('.').pop()||asset.mimeType?.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const path=`${field}/${session.user.id}-${Date.now()}.${ext}`;setBrandingSaving(true);const response=await fetch(asset.uri);const blob=await response.blob();const {error:uploadError}=await supabase.storage.from('login-branding').upload(path,blob,{upsert:true,contentType:asset.mimeType||'image/jpeg',cacheControl:'31536000'});if(uploadError)throw uploadError;const {data}=supabase.storage.from('login-branding').getPublicUrl(path);
 const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
 const nextBranding = { ...branding, [field]: publicUrl, id: 'default', updated_at: new Date().toISOString(), updated_by: session.user.id };
 // Persist the selected logo immediately so it survives refresh even if Save is overlooked.
@@ -546,7 +546,7 @@ setError(`${label} uploaded and saved. It will remain selected after refresh.`);
    setError('');
    const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
    if(!permission.granted){setError('Allow photo-library access to choose banner images.');return;}
-   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:false,allowsMultipleSelection:true,selectionLimit:10,quality:0.88});
+   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:false,allowsMultipleSelection:true,selectionLimit:10,quality:0.78});
    if(result.canceled||!result.assets?.length)return;
    const assets=result.assets;
    for(const asset of assets){
@@ -562,7 +562,7 @@ setError(`${label} uploaded and saved. It will remain selected after refresh.`);
     const ext=(asset.fileName?.split('.').pop()||mime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
     const response=await fetch(asset.uri);const blob=await response.blob();
     const path=`${session.user.id}/${Date.now()}-${i}-${Math.random().toString(36).slice(2,7)}.${ext}`;
-    const {error:uploadError}=await supabase.storage.from('store-banners').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'3600'});
+    const {error:uploadError}=await supabase.storage.from('store-banners').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
     if(uploadError)throw uploadError;
     const {data}=supabase.storage.from('store-banners').getPublicUrl(path);
     uploaded.push(`${data.publicUrl}?v=${Date.now()}`);
