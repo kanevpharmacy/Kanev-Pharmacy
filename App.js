@@ -80,6 +80,7 @@ const healthDocumentNumber = (doc) => `${doc?.document_type === 'prescription' ?
 
 const DEFAULT_LOGIN_BRANDING = {
   homepage_category_ids: [],
+  loading_logo_url: '',
   pharmacy_title: 'Kanev Pharmacy', tagline: 'Closer to Your Health',
   logo_left_url: '', logo_form_url: '', header_logo_url: '', left_background_image_url: '',
   left_background_color: '#0B4B38', left_heading: 'Closer to your health.',
@@ -1652,8 +1653,8 @@ export default function App() {
       <SafeAreaView style={[styles.safe, { alignItems: 'center', justifyContent: 'center' }]}>
         <ExpoStatusBar style="dark" />
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        <View style={styles.logoMark}><Ionicons name="leaf" size={21} color="#FFFFFF" /></View>
-        <Text style={styles.brandName}>Kanev Pharmacy</Text>
+        {loginBranding.loading_logo_url ? <Image source={{ uri: loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 112, height: 112, marginBottom: 12 }} /> : <View style={styles.logoMark}><Ionicons name="leaf" size={21} color="#FFFFFF" /></View>}
+        <Text style={styles.brandName}>{loginBranding.pharmacy_title || "Kanev Pharmacy"}</Text>
         <Text style={styles.tagline}>Preparing your secure workspace…</Text>
       </SafeAreaView>
     );
