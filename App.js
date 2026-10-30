@@ -319,23 +319,56 @@ export default function App() {
   }, [products, query]);
 
   const loadCatalogue = useCallback(async () => {
-    if (!supabaseConfigured) { setProducts(PRODUCTS); setCatalogueSource('demo'); setCatalogueLoading(false); return; }
+    if (!supabaseConfigured || !supabase) { setProducts(PRODUCTS); setCatalogueSource('demo'); setCatalogueLoading(false); return; }
     setCatalogueLoading(true);
-    const { data, error } = await supabase.from('products').select('id,name,slug,description,brand,image_url,price_zmw,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id,categories(name),subcategory:store_menu_items!products_menu_subcategory_id_fkey(label)').eq('is_active', true).order('is_featured', { ascending: false }).order('name');
-    if (error) { setProducts([]); setCatalogueSource('error'); }
-    else {
-      let assignmentsByProduct = {};
-      const { data: links, error: linksError } = await supabase.from('product_categories').select('product_id,category_id,categories(name)');
-      if (!linksError) (links || []).forEach(link => { (assignmentsByProduct[link.product_id] ||= []).push({ id: link.category_id, name: link.categories?.name || '' }); });
+    try {
+      // Keep the core products query independent from PostgREST relationship metadata.
+      // A missing/renamed FK relationship must not make the entire public catalogue fail.
+      const { data, error } = await supabase
+        .from('products')
+        .select('id,name,slug,description,brand,image_url,price_zmw,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id')
+        .eq('is_active', true)
+        .order('is_featured', { ascending: false })
+        .order('name');
+      if (error) throw error;
+
+      const [categoryResult, linkResult, menuResult] = await Promise.all([
+        supabase.from('categories').select('id,name').eq('is_active', true),
+        supabase.from('product_categories').select('product_id,category_id'),
+        supabase.from('store_menu_items').select('id,label')
+      ]);
+      const categoryNamesById = Object.fromEntries((categoryResult.data || []).map(row => [row.id, row.name]));
+      const subcategoryNamesById = Object.fromEntries((menuResult.data || []).map(row => [row.id, row.label]));
+      const assignmentsByProduct = {};
+      if (!linkResult.error) (linkResult.data || []).forEach(link => {
+        (assignmentsByProduct[link.product_id] ||= []).push(link.category_id);
+      });
+
       setProducts((data || []).map(p => {
-        const linked = assignmentsByProduct[p.id] || [];
-        const categoryNames = [...new Set([...(linked.map(x => x.name).filter(Boolean)), p.categories?.name].filter(Boolean))];
-        const categoryIds = [...new Set([...(linked.map(x => x.id)), p.category_id].filter(Boolean))];
-        return { ...p, category_ids: categoryIds, categories_list: categoryNames, price: Number(p.price_zmw), category: categoryNames[0] || 'Other', subcategory: p.subcategory?.label || '', prescriptionRequired: p.requires_prescription, icon: 'medical-outline', tint: '#EAF4EE', badge: p.is_featured ? 'FEATURED' : undefined, stock: Number(p.stock_quantity || 0) };
+        const categoryIds = [...new Set([...(assignmentsByProduct[p.id] || []), p.category_id].filter(Boolean))];
+        const categoryNames = [...new Set(categoryIds.map(id => categoryNamesById[id]).filter(Boolean))];
+        return {
+          ...p,
+          category_ids: categoryIds,
+          categories_list: categoryNames,
+          price: Number(p.price_zmw || 0),
+          category: categoryNames[0] || 'Other',
+          subcategory: subcategoryNamesById[p.menu_subcategory_id] || '',
+          prescriptionRequired: p.requires_prescription,
+          icon: 'medical-outline',
+          tint: '#EAF4EE',
+          badge: p.is_featured ? 'FEATURED' : undefined,
+          stock: Number(p.stock_quantity || 0)
+        };
       }));
       setCatalogueSource('live');
+    } catch (error) {
+      console.error('[Kanev catalogue] Failed to load products:', error);
+      setProducts([]);
+      setCatalogueSource('error');
+    } finally {
+      setCatalogueLoading(false);
     }
-    setCatalogueLoading(false);
   }, []);
 
   useEffect(() => {
