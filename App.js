@@ -79,6 +79,7 @@ function BannerImageSlideshow({ banner, style, resizeMode = 'cover', opacity = 1
 const healthDocumentNumber = (doc) => `${doc?.document_type === 'prescription' ? 'RX' : 'LAB'}-${doc?.created_at ? new Date(doc.created_at).toISOString().slice(0,10).replaceAll('-','') : 'DOC'}-${String(doc?.id || '').replace(/-/g,'').slice(0,6).toUpperCase() || 'NEW'}`;
 
 const DEFAULT_LOGIN_BRANDING = {
+  homepage_category_ids: [],
   pharmacy_title: 'Kanev Pharmacy', tagline: 'Closer to Your Health',
   logo_left_url: '', logo_form_url: '', header_logo_url: '', left_background_image_url: '',
   left_background_color: '#0B4B38', left_heading: 'Closer to your health.',
@@ -1035,19 +1036,18 @@ export default function App() {
           activeMenu.filter(item => item.parent_id === parentId).forEach(child => found.push(...getDescendantIds(child.id)));
           return found;
         };
-        const sections = roots.flatMap(root => activeMenu
-          .filter(child => child.parent_id === root.id)
-          .map(child => {
-            const ids = new Set(getDescendantIds(child.id));
-            const normalizedLabel = String(child.label || '').trim().toLowerCase();
-            const list = products.filter(product => {
-              if (product.menu_subcategory_id && ids.has(product.menu_subcategory_id)) return true;
-              const names = [product.category, ...(product.categories_list || []), product.subcategory].filter(Boolean).map(value => String(value).trim().toLowerCase());
-              return names.includes(normalizedLabel);
-            }).slice(0, 10);
-            return { id: child.id, heading: child.label, list };
-          })
-        ).filter(section => section.list.length > 0);
+        const configuredIds = Array.isArray(loginBranding.homepage_category_ids) ? loginBranding.homepage_category_ids : [];
+        const selectedNodes = configuredIds.length ? configuredIds.map(id => activeMenu.find(item => item.id === id)).filter(item => item && item.parent_id) : roots.flatMap(root => activeMenu.filter(item => item.parent_id === root.id));
+        const sections = selectedNodes.map(node => {
+          const ids = new Set(getDescendantIds(node.id));
+          const normalizedLabel = String(node.label || '').trim().toLowerCase();
+          const list = products.filter(product => {
+            if (product.menu_subcategory_id && ids.has(product.menu_subcategory_id)) return true;
+            const names = [product.category, ...(product.categories_list || []), product.subcategory].filter(Boolean).map(value => String(value).trim().toLowerCase());
+            return names.includes(normalizedLabel);
+          }).slice(0, 10);
+          return { id: node.id, heading: node.label, list };
+        }).filter(section => section.list.length > 0);
         return sections.map(section => (
           <View key={section.id} style={styles.carouselSection}>
             <View style={styles.sectionHeader}>
