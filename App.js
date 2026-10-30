@@ -97,29 +97,31 @@ function ActionButton({ title, onPress, secondary = false, disabled = false }) {
   );
 }
 
-function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 145, imageResizeMode = 'contain' }) {
+function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 145, imageResizeMode = 'contain', mobile = false }) {
   const originalPrice = Number(product.original_price || product.original_price_zmw || 0);
   const sellingPrice = Number(product.price || product.price_zmw || 0);
   const discount = originalPrice > sellingPrice && originalPrice > 0
     ? Math.round((1 - sellingPrice / originalPrice) * 100)
     : 0;
-  const rating = Math.max(0, Math.min(5, Number(product.rating ?? 5)));
+  const ratingValue = Number(product.rating);
+  const hasRating = Number.isFinite(ratingValue) && ratingValue > 0;
+  const rating = Math.max(0, Math.min(5, ratingValue));
   return (
-    <View style={[styles.productCard,{width:cardWidth,flexBasis:cardWidth,maxWidth:cardWidth}]}>
+    <View style={[styles.productCard,{width:cardWidth,flexBasis:cardWidth,maxWidth:cardWidth},mobile && {padding:10,borderRadius:18,marginBottom:2}]}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
-        <View style={[styles.productImage, { backgroundColor: '#F6F9F7', height: imageHeight }]}>
+        <View style={[styles.productImage, { backgroundColor: '#F6F9F7', height: imageHeight },mobile && {height:imageHeight,borderRadius:13,marginBottom:9}]}>
           {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode={imageResizeMode} /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
-          <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View>
-          {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% Off</Text></View> : null}
+          {hasRating ? <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View> : null}
+          {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% off</Text></View> : null}
         </View>
-        <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+        <Text style={[styles.productName,mobile && {fontSize:14,lineHeight:19,minHeight:38,marginTop:1,marginBottom:5}]} numberOfLines={2}>{product.name}</Text>
       </Pressable>
-      <View style={styles.productBottom}>
-        <View style={styles.priceRow}>
-          <Text style={styles.price} numberOfLines={1}>{money(sellingPrice)}</Text>
+      <View style={[styles.productBottom,mobile && {marginTop:4,gap:7,alignItems:'center'}]}>
+        <View style={[styles.priceRow,mobile && {flexDirection:'column',alignItems:'flex-start',gap:1,flexWrap:'nowrap'}]}>
+          <Text style={[styles.price,mobile && {fontSize:15,lineHeight:20}]} numberOfLines={1}>{money(sellingPrice)}</Text>
           {discount > 0 ? <Text style={styles.originalPrice} numberOfLines={1}>{money(originalPrice)}</Text> : null}
         </View>
-        <Pressable onPress={() => onAdd(product)} style={styles.addButton} accessibilityLabel={`Add ${product.name} to cart`}>
+        <Pressable onPress={() => onAdd(product)} style={[styles.addButton,mobile && {width:39,height:39,borderRadius:13,flexShrink:0}]} accessibilityLabel={`Add ${product.name} to cart`}>
           <Ionicons name="add" size={22} color="#FFFFFF" />
         </Pressable>
       </View>
@@ -1194,7 +1196,7 @@ export default function App() {
       <View style={styles.searchResultsHeading}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.pageTitle}>{query.trim() ? 'Search results' : 'Shop products'}</Text>
-          <Text style={styles.pageSubtitle}>{query.trim() ? `Results for “${query.trim()}”` : 'Find pharmacy, wellness and personal care essentials.'}</Text>
+          {isDesktop && <Text style={styles.pageSubtitle}>{query.trim() ? `Results for “${query.trim()}”` : 'Find pharmacy, wellness and personal care essentials.'}</Text>}
         </View>
         {query.trim() ? <Pressable style={styles.clearSearchAction} onPress={() => setQuery('')}><Ionicons name="close-circle-outline" size={16} color={COLORS.green}/><Text style={styles.clearSearchActionText}>Clear search</Text></Pressable> : null}
       </View>
@@ -1216,11 +1218,11 @@ export default function App() {
       </ScrollView>)}
       <Text style={styles.resultsText}>{shopFiltered.length} {shopFiltered.length === 1 ? 'product' : 'products'}{query.trim() ? ` found for “${query.trim()}”` : category !== 'All' ? ` in ${category}` : ' available'}</Text>
       {category === 'All' ? <View style={styles.productGrid}>
-        {shopFiltered.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}} />)}
+        {shopFiltered.map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop ? '19%' : '48%'} imageHeight={isDesktop ? 145 : 176} imageResizeMode={isDesktop ? 'cover' : 'contain'} mobile={!isDesktop} onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}} />)}
       </View> : shopProductGroups.map(([groupName, groupProducts]) => (
         <View key={groupName} style={{marginBottom:22}}>
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{groupName}</Text><Text style={styles.homeSectionSub}>{groupProducts.length} {groupProducts.length===1?'product':'products'}</Text></View>
-          <View style={styles.productGrid}>{groupProducts.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}} />)}</View>
+          <View style={styles.productGrid}>{groupProducts.map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop ? '19%' : '48%'} imageHeight={isDesktop ? 145 : 176} imageResizeMode={isDesktop ? 'cover' : 'contain'} mobile={!isDesktop} onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}} />)}</View>
         </View>
       ))}
       {shopFiltered.length === 0 && <View style={styles.searchEmptyState}>
