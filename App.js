@@ -182,6 +182,7 @@ export default function App() {
   const [headerSearchFocused, setHeaderSearchFocused] = useState(false);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [mobileHeaderMenuOpen, setMobileHeaderMenuOpen] = useState(false);
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [deliveryModalVisible, setDeliveryModalVisible] = useState(false);
   const [deliverySearch, setDeliverySearch] = useState('');
@@ -1060,6 +1061,7 @@ export default function App() {
     <>
 
       <View style={styles.tmHero}>
+        {isDesktop && (
         <View style={styles.tmHeroServices}>
           {[
             { title: 'Upload Prescriptions', subtitle: 'Easy & Fast', icon: 'receipt-outline', color: '#087F50', action: () => { setHealthDocType('prescription'); if (session?.user) setTab('HealthDocuments'); else { setTab('Account'); setAuthMode('signin'); setAuthModalVisible(true); } } },
@@ -1076,11 +1078,12 @@ export default function App() {
             </Pressable>
           ))}
         </View>
+        )}
         {storeBanners.filter(x=>x.placement==='hero_side').length ? storeBanners.filter(x=>x.placement==='hero_side').map(banner=><Pressable key={banner.id} onPress={()=>banner.link_url&&/^https?:\/\//i.test(banner.link_url)?Linking.openURL(banner.link_url).catch(()=>{}):setTab('Shop')} style={[styles.tmHeroSide,{backgroundColor:banner.background_color||'#D6F1E0',overflow:'hidden',position:'relative',}]}>{(banner.image_url||(Array.isArray(banner.image_urls)&&banner.image_urls.length))?<BannerImageSlideshow banner={banner} opacity={1} showDots={true}/>:null}<View style={{zIndex:1,alignItems:'center',justifyContent:'center',flex:1,padding:12,backgroundColor:(banner.image_url||(Array.isArray(banner.image_urls)&&banner.image_urls.length))?'rgba(4,43,31,0.18)':'transparent',borderRadius:18}}><Text style={[styles.tmHeroSideTitle,{color:banner.text_color||((banner.image_url||(Array.isArray(banner.image_urls)&&banner.image_urls.length))?'#FFFFFF':COLORS.green),textShadowColor:'rgba(0,0,0,0.45)',textShadowOffset:{width:0,height:1},textShadowRadius:3}]}>{banner.title}</Text>{banner.description?<Text style={[styles.tmHeroSideText,{color:banner.text_color||((banner.image_url||(Array.isArray(banner.image_urls)&&banner.image_urls.length))?'#FFFFFF':COLORS.muted),textShadowColor:'rgba(0,0,0,0.45)',textShadowOffset:{width:0,height:1},textShadowRadius:3}]}>{banner.description}</Text>:null}{banner.button_text?<Text style={{fontSize:12,fontWeight:'800',color:banner.eyebrow_color||((banner.image_url||(Array.isArray(banner.image_urls)&&banner.image_urls.length))?'#C8F36A':COLORS.green),marginTop:8,textShadowColor:'rgba(0,0,0,0.45)',textShadowOffset:{width:0,height:1},textShadowRadius:3}}>{banner.button_text} →</Text>:null}</View></Pressable>) : <View style={styles.tmHeroSide}><Text style={styles.tmHeroSideTitle}>{loginBranding.benefit_three}</Text><Text style={styles.tmHeroSideText}>Health, wellness and personal care in one place</Text></View>}
       </View>
       <View style={styles.tmQuickActions}>
         <Pressable style={styles.tmQuickCard} onPress={() => setTab('Shop')}><View style={styles.tmQuickIcon}><Ionicons name="medical-outline" size={27} color={COLORS.green}/></View><View style={{flex:1}}><Text style={styles.tmQuickTitle}>Order medicines</Text><Text style={styles.tmQuickSubtitle}>Explore the live catalogue</Text></View><Ionicons name="arrow-forward" size={20} color={COLORS.green}/></Pressable>
-        <Pressable style={styles.tmQuickCard} onPress={() => { setHealthDocType('prescription'); if (session?.user) setTab('HealthDocuments'); else { setTab('Account'); setAuthMode('signin'); setAuthModalVisible(true); } }}><View style={styles.tmQuickIcon}><Ionicons name="document-text-outline" size={27} color={COLORS.green}/></View><View style={{flex:1}}><Text style={styles.tmQuickTitle}>Have a prescription?</Text><Text style={styles.tmQuickSubtitle}>Contact our pharmacy team for review</Text></View><Ionicons name="arrow-forward" size={20} color={COLORS.green}/></Pressable>
+        {isDesktop && <Pressable style={styles.tmQuickCard} onPress={() => { setHealthDocType('prescription'); if (session?.user) setTab('HealthDocuments'); else { setTab('Account'); setAuthMode('signin'); setAuthModalVisible(true); } }}><View style={styles.tmQuickIcon}><Ionicons name="document-text-outline" size={27} color={COLORS.green}/></View><View style={{flex:1}}><Text style={styles.tmQuickTitle}>Have a prescription?</Text><Text style={styles.tmQuickSubtitle}>Contact our pharmacy team for review</Text></View><Ionicons name="arrow-forward" size={20} color={COLORS.green}/></Pressable>}
       </View>
       {storeBanners.some(x => x.placement === 'hero') ? storeBanners.filter(x => x.placement === 'hero').map(banner => <Pressable key={banner.id} onPress={() => banner.link_url ? Linking.openURL(banner.link_url).catch(()=>notify('Link unavailable','This banner link could not be opened.','warning')) : setTab('Shop')} style={[styles.tmPromoBanner,{backgroundColor:banner.background_color||'#0B4B38',overflow:'hidden',minHeight:banner.image_url?220:150}]}>{(banner.image_url || (Array.isArray(banner.image_urls) && banner.image_urls.length))?<BannerImageSlideshow banner={banner} opacity={.95}/>:null}<View style={{flex:1,zIndex:1}}><Text style={[styles.tmPromoEyebrow,{color:banner.eyebrow_color||'#C8F36A'}]}>{banner.eyebrow||'Kanev Pharmacy'}</Text><Text style={[styles.tmPromoTitle,{color:banner.text_color||'#FFFFFF'}]}>{banner.title}</Text>{banner.description?<Text style={[styles.tmPromoSub,{color:banner.text_color||'#FFFFFF'}]}>{banner.description}</Text>:null}{banner.button_text?<View style={[styles.tmPromoButton,{alignSelf:'flex-start',backgroundColor:banner.button_color||'#C8F36A'}]}><Text style={styles.tmPromoButtonText}>{banner.button_text}  →</Text></View>:null}</View></Pressable>) : <View style={styles.tmPromoBanner}><View style={{flex:1}}><Text style={styles.tmPromoEyebrow}>Kanev Pharmacy</Text><Text style={styles.tmPromoTitle}>Everyday essentials for the whole family</Text><Text style={styles.tmPromoSub}>Discover skincare, baby care, vitamins and more.</Text><Pressable style={styles.tmPromoButton} onPress={() => {setCategory('All');setTab('Shop')}}><Text style={styles.tmPromoButtonText}>Shop now  →</Text></Pressable></View><Ionicons name="heart-circle" size={82} color="#C3ED8A"/></View>}
       <View style={styles.roundCategorySection}>
@@ -1703,14 +1706,35 @@ export default function App() {
           <View style={styles.footerBottom}><Text style={styles.footerBottomText}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text><Text style={styles.footerBottomText}>Please use medicines responsibly and follow professional advice.</Text></View>
         </View>
       </ScrollView>
+      {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
+        <View style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
+          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+            <View><Text style={{fontSize:16,fontWeight:'900',color:COLORS.ink}}>Healthcare services</Text><Text style={{fontSize:11,color:COLORS.muted,marginTop:3}}>Choose a service to continue</Text></View>
+            <Pressable onPress={()=>setMobileServicesOpen(false)} style={{width:32,height:32,borderRadius:16,backgroundColor:'#F1F7F3',alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={19} color={COLORS.green}/></Pressable>
+          </View>
+          <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
+            {[
+              {title:'Upload prescription',sub:'Send for pharmacy review',icon:'document-text-outline',run:()=>{setHealthDocType('prescription');if(session?.user)setTab('HealthDocuments');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
+              {title:'Lab test results',sub:'Upload and view lab documents',icon:'flask-outline',run:()=>{setHealthDocType('lab_result');if(session?.user)setTab('HealthDocuments');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
+              {title:'Delivery',sub:'Delivery information and tracking',icon:'car-outline',run:()=>{if(session?.user){setAccountSection('orders');setTab('Account');}else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
+              {title:'Health insurance',sub:'Insurance and co-pay support',icon:'shield-checkmark-outline',run:()=>notify('Health insurance','Contact Kanev Pharmacy to confirm accepted insurance providers and co-pay arrangements.')},
+            ].map(item=><Pressable key={item.title} onPress={()=>{setMobileServicesOpen(false);setSelectedProduct(null);item.run();}} style={{width:'48%',flexGrow:1,minHeight:92,borderRadius:13,borderWidth:1,borderColor:'#E1EBE5',backgroundColor:'#FBFDFC',padding:11,gap:6}}>
+              <View style={{width:34,height:34,borderRadius:11,backgroundColor:'#E8F5ED',alignItems:'center',justifyContent:'center'}}><Ionicons name={item.icon} size={19} color={COLORS.green}/></View>
+              <Text style={{fontSize:12,fontWeight:'900',color:COLORS.ink}}>{item.title}</Text><Text style={{fontSize:10,color:COLORS.muted,lineHeight:14}}>{item.sub}</Text>
+            </Pressable>)}
+          </View>
+        </View>
+      </Pressable>}
       <View style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
-        {[['Home', 'home-outline'], ['Shop', 'grid-outline'], ['Cart', 'bag-handle-outline'], ['Account', 'person-outline']].map(([name, icon]) => (
-          <Pressable key={name} onPress={() => { setSelectedProduct(null); if (name === 'Account' && !session?.user) { setAuthMode('signin'); setAuthModalVisible(true); } else setTab(name); }} style={styles.tabItem}>
-            <View style={[styles.tabIconWrap, tab === name && styles.tabIconWrapActive]}>
-              <Ionicons name={icon} size={21} color={tab === name ? COLORS.green : COLORS.muted} />
-              {name === 'Cart' && cartCount > 0 && <View style={styles.tabBadge} />}
-            </View>
-            <Text style={[styles.tabLabel, tab === name && styles.tabLabelActive]}>{name}</Text>
+        {[
+          {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
+          {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{setSelectedProduct(null);setCategory('All');setTab('Shop');setMobileServicesOpen(false);}},
+          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,run:()=>setMobileServicesOpen(v=>!v)},
+          {name:'Account',icon:'person-outline',active:tab==='Account'&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
+        ].map(item=>(
+          <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
+            <View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>
+            <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
           </Pressable>
         ))}
       </View>
