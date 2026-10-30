@@ -1027,10 +1027,43 @@ export default function App() {
         <View style={styles.promoTiles}>{(storeBanners.filter(x => x.placement === 'deal_tile').length ? storeBanners.filter(x => x.placement === 'deal_tile') : [{id:'default-deal-1',eyebrow:'Kanev offers',title:'Care that fits your budget',button_text:'Explore offers',background_color:'#E3F3FC',text_color:'#064E3B',link_url:''},{id:'default-deal-2',eyebrow:'Wellness picks',title:'Support your everyday wellbeing',button_text:'Shop wellness',background_color:'#FFF0DE',text_color:'#064E3B',link_url:'wellness'}]).slice(0,4).map((banner,index)=><Pressable key={banner.id} style={[styles.promoTile,{backgroundColor:banner.background_color||'#E3F3FC',overflow:'hidden'}]} onPress={()=>{if(banner.link_url&&/^https?:\/\//i.test(banner.link_url)) Linking.openURL(banner.link_url).catch(()=>{}); else {setCategory(index===1?'Wellness':'All');setTab('Shop');}}}>{(banner.image_url || (Array.isArray(banner.image_urls) && banner.image_urls.length))?<BannerImageSlideshow banner={banner} opacity={.24} showDots={false}/>:null}<Text style={[styles.promoTileKicker,{color:banner.text_color||'#064E3B'}]}>{banner.eyebrow||'Kanev Pharmacy'}</Text><Text style={[styles.promoTileTitle,{color:banner.text_color||'#064E3B'}]}>{banner.title}</Text><Text style={[styles.promoTileLink,{color:banner.text_color||'#236DA8'}]}>{banner.button_text||'Explore' }  →</Text></Pressable>)}</View>
       </View>
 
-      {['Deals for your everyday care','Personal care favourites','Wellness and supplements'].map((heading,sectionIndex)=>{
-        const list = sectionIndex===0 ? products.filter(p=>p.badge||p.is_featured).slice(0,5) : sectionIndex===1 ? products.filter(p=>/skin|baby|personal|care|lotion/i.test(`${p.category||''} ${p.name||''}`)).slice(0,5) : products.filter(p=>/wellness|vitamin|supplement/i.test(`${p.category||''} ${p.name||''}`)).slice(0,5);
-        return <View key={heading} style={styles.carouselSection}><View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>{heading}</Text><Text style={styles.homeSectionSub}>Selected from the Kanev catalogue</Text></View><Pressable onPress={()=>{setCategory('All');setTab('Shop')}}><Text style={styles.link}>View all  ›</Text></Pressable></View>{list.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productCarousel}>{list.map(p=><View key={`${heading}-${p.id}`} style={styles.carouselProduct}><ProductCard product={p} cardWidth="100%" onAdd={addToCart} onOpen={()=>setSelectedProduct(p)}/></View>)}</ScrollView> : <Pressable style={styles.carouselEmpty} onPress={()=>setTab('Shop')}><Ionicons name="basket-outline" size={25} color={COLORS.green}/><View style={{flex:1}}><Text style={styles.carouselEmptyTitle}>Products will appear here</Text><Text style={styles.homeSectionSub}>Published products from the catalogue show automatically.</Text></View><Ionicons name="chevron-forward" size={18} color={COLORS.green}/></Pressable>}</View>;
-      })}
+      {(() => {
+        const activeMenu = storeMenuItems.filter(item => item.is_active !== false);
+        const roots = activeMenu.filter(item => !item.parent_id);
+        const getDescendantIds = (parentId) => {
+          const found = [parentId];
+          activeMenu.filter(item => item.parent_id === parentId).forEach(child => found.push(...getDescendantIds(child.id)));
+          return found;
+        };
+        const sections = roots.flatMap(root => activeMenu
+          .filter(child => child.parent_id === root.id)
+          .map(child => {
+            const ids = new Set(getDescendantIds(child.id));
+            const normalizedLabel = String(child.label || '').trim().toLowerCase();
+            const list = products.filter(product => {
+              if (product.menu_subcategory_id && ids.has(product.menu_subcategory_id)) return true;
+              const names = [product.category, ...(product.categories_list || []), product.subcategory].filter(Boolean).map(value => String(value).trim().toLowerCase());
+              return names.includes(normalizedLabel);
+            }).slice(0, 10);
+            return { id: child.id, heading: child.label, list };
+          })
+        ).filter(section => section.list.length > 0);
+        return sections.map(section => (
+          <View key={section.id} style={styles.carouselSection}>
+            <View style={styles.sectionHeader}>
+              <View><Text style={styles.sectionTitle}>{section.heading}</Text><Text style={styles.homeSectionSub}>Shop by {section.heading.toLowerCase()}</Text></View>
+              <Pressable onPress={() => { setCategory(section.heading); setTab('Shop'); }}><Text style={styles.link}>View all  ›</Text></Pressable>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productCarousel}>
+              {section.list.map(product => (
+                <View key={`${section.id}-${product.id}`} style={styles.carouselProduct}>
+                  <ProductCard product={product} cardWidth="100%" onAdd={addToCart} onOpen={() => setSelectedProduct(product)} />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        ));
+      })()}
       <View style={styles.orderVia}><Text style={styles.orderViaEyebrow}>A SIMPLE WAY TO ORDER</Text><Text style={styles.orderViaTitle}>Choose how we can help</Text><View style={styles.orderViaCards}><Pressable style={styles.orderViaCard} onPress={()=>setTab('Shop')}><Ionicons name="call-outline" size={26} color={COLORS.green}/><View style={{flex:1}}><Text style={styles.tmQuickTitle}>Browse and order online</Text><Text style={styles.tmQuickSubtitle}>Choose products and submit an order request.</Text></View><Ionicons name="chevron-forward" size={18} color={COLORS.green}/></Pressable><Pressable style={styles.orderViaCard} onPress={()=>setTab('Account')}><Ionicons name="document-attach-outline" size={26} color={COLORS.green}/><View style={{flex:1}}><Text style={styles.tmQuickTitle}>Have a prescription?</Text><Text style={styles.tmQuickSubtitle}>Sign in to contact the pharmacy about prescription review.</Text></View><Ionicons name="chevron-forward" size={18} color={COLORS.green}/></Pressable></View></View>
       <View style={styles.contentEditorial}>
         <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Health articles</Text><Text style={styles.homeSectionSub}>Helpful information for everyday wellbeing</Text></View></View>
