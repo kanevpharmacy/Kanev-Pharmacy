@@ -106,7 +106,7 @@ function ProductCard({ product, onAdd, onOpen, cardWidth = '19%' }) {
   return (
     <View style={[styles.productCard,{width:cardWidth,flexBasis:cardWidth,maxWidth:cardWidth}]}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
-        <View style={[styles.productImage, { backgroundColor: '#FFFFFF' }]}>
+        <View style={[styles.productImage, { backgroundColor: '#F6F9F7' }]}>
           {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%' }} resizeMode="contain" /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
           <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View>
           {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% Off</Text></View> : null}
@@ -114,7 +114,7 @@ function ProductCard({ product, onAdd, onOpen, cardWidth = '19%' }) {
         <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
       </Pressable>
       <View style={styles.productBottom}>
-        <View style={{flex:1,minWidth:0}}>
+        <View style={styles.priceRow}>
           <Text style={styles.price} numberOfLines={1}>{money(sellingPrice)}</Text>
           {discount > 0 ? <Text style={styles.originalPrice} numberOfLines={1}>{money(originalPrice)}</Text> : null}
         </View>
@@ -1764,20 +1764,21 @@ const styles = StyleSheet.create({
   categoryIcon: { width: 43, height: 43, borderRadius: 14, backgroundColor: COLORS.pale, alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
   categoryName: { color: COLORS.ink, fontWeight: '700', fontSize: 11, textAlign: 'center' },
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
-  productCard: { width: '19%', flexGrow: 0, flexShrink: 0, flexBasis: '19%', maxWidth: '19%', backgroundColor: '#FFFFFF', borderRadius: 17, padding: 9, borderWidth: 1, borderColor: COLORS.border, minWidth: 0 },
-  productImage: { height: 155, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 9, position: 'relative' },
+  productCard: { width: '19%', flexGrow: 0, flexShrink: 0, flexBasis: '19%', maxWidth: '19%', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 9, borderWidth: 1, borderColor: '#E3ECE6', minWidth: 0, shadowColor: '#173D2C', shadowOpacity: 0.045, shadowRadius: 7, shadowOffset: {width:0,height:3}, elevation: 1 },
+  productImage: { height: 145, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginBottom: 5, position: 'relative', overflow: 'hidden' },
   ratingBadge: {position:'absolute',top:7,left:7,backgroundColor:'#139FDB',borderRadius:12,paddingHorizontal:7,paddingVertical:3,flexDirection:'row',alignItems:'center',gap:3},
   ratingBadgeText: {color:'#FFFFFF',fontSize:10,fontWeight:'900'},
   discountBadge: {position:'absolute',top:7,right:7,backgroundColor:'#FF7417',borderRadius:4,paddingHorizontal:6,paddingVertical:4},
   discountBadgeText: {color:'#FFFFFF',fontSize:10,fontWeight:'900'},
-  originalPrice: {color:'#9AA3A0',fontSize:11,fontWeight:'700',textDecorationLine:'line-through',marginTop:2},
+  originalPrice: {color:'#9AA3A0',fontSize:10,fontWeight:'700',textDecorationLine:'line-through'},
   productBadge: { position: 'absolute', top: 8, left: 8, overflow: 'hidden', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 4, color: COLORS.green, backgroundColor: '#FFFFFF', fontSize: 9, fontWeight: '900' },
   productCategory: { display: 'none' },
-  productName: { color: COLORS.ink, fontSize: 12, lineHeight: 17, fontWeight: '800', minHeight: 34, marginTop: 5 },
+  productName: { color: COLORS.ink, fontSize: 12, lineHeight: 16, fontWeight: '800', minHeight: 0, marginTop: 3, marginBottom: 0 },
   productDescription: { display: 'none' },
-  productBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, gap: 5 },
+  productBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 5, gap: 5 },
+  priceRow: {flex:1,minWidth:0,flexDirection:'row',alignItems:'baseline',flexWrap:'wrap',columnGap:5,rowGap:0},
   price: { color: COLORS.green, fontSize: 14, fontWeight: '900' },
-  addButton: { width: 33, height: 33, borderRadius: 11, backgroundColor: COLORS.green, alignItems: 'center', justifyContent: 'center' },
+  addButton: { width: 34, height: 34, borderRadius: 12, backgroundColor: COLORS.green, alignItems: 'center', justifyContent: 'center' },
   supportBanner: { marginTop: 24, padding: 16, borderRadius: 17, backgroundColor: '#EAF4EE', flexDirection: 'row', alignItems: 'center', gap: 12 },
   supportTitle: { color: COLORS.ink, fontSize: 13, fontWeight: '900' },
   supportText: { color: COLORS.muted, fontSize: 11, lineHeight: 16, marginTop: 3 },
