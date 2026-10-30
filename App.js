@@ -189,6 +189,7 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [cartStorageReady, setCartStorageReady] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProductImageIndex, setSelectedProductImageIndex] = useState(0);
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '', deliveryNotes: '' });
   const [orderType, setOrderType] = useState('Delivery');
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -352,7 +353,7 @@ export default function App() {
       // A missing/renamed FK relationship must not make the entire public catalogue fail.
       const { data, error } = await supabase
         .from('products')
-        .select('id,name,slug,description,brand,image_url,price_zmw,original_price_zmw,rating,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id')
+        .select('id,name,slug,description,brand,image_url,price_zmw,original_price_zmw,rating,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id,image_urls')
         .eq('is_active', true)
         .order('is_featured', { ascending: false })
         .order('name');
@@ -375,6 +376,7 @@ export default function App() {
         const categoryNames = [...new Set(categoryIds.map(id => categoryNamesById[id]).filter(Boolean))];
         return {
           ...p,
+          image_urls: Array.isArray(p.image_urls) && p.image_urls.length ? p.image_urls : (p.image_url ? [p.image_url] : []),
           category_ids: categoryIds,
           categories_list: categoryNames,
           price: Number(p.price_zmw || 0),
@@ -1040,8 +1042,8 @@ export default function App() {
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Popular items</Text><Text style={styles.homeSectionSub}>Browse available pharmacy products</Text></View><Pressable onPress={() => setTab('Shop')}><Text style={styles.link}>View all  →</Text></Pressable></View>
       {catalogueLoading ? <View style={styles.homeLoading}><Text style={styles.smallNote}>Loading live products…</Text></View> : null}
       {!catalogueLoading && !products.length && catalogueSource !== 'error' ? <View style={styles.homeLoading}><Ionicons name="basket-outline" size={30} color={COLORS.muted}/><Text style={styles.supportTitle}>No products published yet</Text><Text style={styles.supportText}>The pharmacy catalogue will appear here when products are available.</Text></View> : null}
-      <View style={styles.productGrid}>{products.slice(0,10).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} imageResizeMode="cover" onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View>
-      {products.length > 10 ? <><View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>More to explore</Text><Text style={styles.homeSectionSub}>Healthcare and personal care favourites</Text></View></View><View style={styles.productGrid}>{products.slice(10,20).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} onAdd={addToCart} onOpen={() => setSelectedProduct(p)}/>)}</View></> : null}
+      <View style={styles.productGrid}>{products.slice(0,10).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} imageResizeMode="cover" onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}}/>)}</View>
+      {products.length > 10 ? <><View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>More to explore</Text><Text style={styles.homeSectionSub}>Healthcare and personal care favourites</Text></View></View><View style={styles.productGrid}>{products.slice(10,20).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}}/>)}</View></> : null}
       {!catalogueLoading && catalogueSource === 'error' ? <View style={styles.homeLoading}><Text style={styles.supportTitle}>Catalogue unavailable</Text><ActionButton title="Retry" secondary onPress={loadCatalogue}/></View> : null}
       <View style={styles.marketPanel}>
         <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Deals you'll love</Text><Text style={styles.homeSectionSub}>Everyday essentials at great prices</Text></View><Pressable onPress={() => {setCategory('All');setTab('Shop')}}><Text style={styles.link}>View all  ›</Text></Pressable></View>
@@ -1150,11 +1152,11 @@ export default function App() {
       </ScrollView>
       <Text style={styles.resultsText}>{shopFiltered.length} {shopFiltered.length === 1 ? 'product' : 'products'}{query.trim() ? ` found for “${query.trim()}”` : category !== 'All' ? ` in ${category}` : ' available'}</Text>
       {category === 'All' ? <View style={styles.productGrid}>
-        {shopFiltered.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => setSelectedProduct(p)} />)}
+        {shopFiltered.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}} />)}
       </View> : shopProductGroups.map(([groupName, groupProducts]) => (
         <View key={groupName} style={{marginBottom:22}}>
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{groupName}</Text><Text style={styles.homeSectionSub}>{groupProducts.length} {groupProducts.length===1?'product':'products'}</Text></View>
-          <View style={styles.productGrid}>{groupProducts.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => setSelectedProduct(p)} />)}</View>
+          <View style={styles.productGrid}>{groupProducts.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => {setSelectedProduct(p);setSelectedProductImageIndex(0);}} />)}</View>
         </View>
       ))}
       {shopFiltered.length === 0 && <View style={styles.searchEmptyState}>
@@ -1486,13 +1488,36 @@ export default function App() {
     if (selectedProduct && tab === 'Shop') return (
       <View style={styles.detailWrap}>
         <Pressable onPress={() => setSelectedProduct(null)} style={styles.backButton}><Ionicons name="arrow-back" size={21} color={COLORS.green} /><Text style={styles.backText}>Back to shop</Text></Pressable>
-        {selectedProduct.image_url ? <Image source={{ uri: optimizedImageUrl(selectedProduct.image_url, 1000, 78) }} style={[styles.detailImage, { backgroundColor: selectedProduct.tint || '#EAF4EE' }]} resizeMode="contain" /> : <View style={[styles.detailImage, { backgroundColor: selectedProduct.tint || '#EAF4EE' }]}><Ionicons name={selectedProduct.icon || 'medical-outline'} size={76} color={COLORS.green} /></View>}
-        <Text style={styles.productCategory}>{selectedProduct.category}</Text>
-        <Text style={styles.detailTitle}>{selectedProduct.name}</Text>
-        <Text style={styles.detailPrice}>{money(selectedProduct.price)}</Text>
-        <Text style={styles.detailDescription}>{selectedProduct.description}</Text>
-        <Text style={styles.detailNotice}>Availability and final dispensing decisions are subject to pharmacy confirmation.</Text>
-        <ActionButton title={selectedProduct.prescriptionRequired ? 'Prescription review required' : 'Add to cart'} onPress={() => addToCart(selectedProduct)} />
+        <View style={{flexDirection:isDesktop?'row':'column',gap:24,alignItems:'stretch'}}>
+          <View style={{flex:isDesktop?1.05:undefined,minWidth:0,flexDirection:isDesktop?'row':'column',gap:12}}>
+            <View style={{flexDirection:isDesktop?'column':'row',gap:8,flexWrap:'wrap',justifyContent:'flex-start'}}>
+              {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).map((url,index)=><Pressable key={url+index} onPress={()=>setSelectedProductImageIndex(index)} style={{width:68,height:68,borderRadius:9,borderWidth:selectedProductImageIndex===index?2:1,borderColor:selectedProductImageIndex===index?COLORS.blue:COLORS.border,backgroundColor:'#F7FAF8',padding:3,overflow:'hidden'}}><Image source={{uri:optimizedImageUrl(url,180,78)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/></Pressable>)}
+            </View>
+            <View style={{flex:1,minHeight:isDesktop?390:280,borderWidth:1,borderColor:COLORS.border,borderRadius:14,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12}}>
+              {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length ? <Image source={{uri:optimizedImageUrl((Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[]))[Math.min(selectedProductImageIndex,(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length-1)],1000,85)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/> : <Ionicons name={selectedProduct.icon||'medical-outline'} size={76} color={COLORS.green}/>}
+            </View>
+          </View>
+          <View style={{flex:1.25,minWidth:0,gap:10}}>
+            <Text style={styles.productCategory}>{selectedProduct.category}</Text>
+            <Text style={styles.detailTitle}>{selectedProduct.name}</Text>
+            {selectedProduct.brand?<Text style={{fontSize:13,color:COLORS.muted,fontWeight:'700'}}>By {selectedProduct.brand}</Text>:null}
+            <View style={{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'}}><Text style={{backgroundColor:'#12A5DC',color:'#FFFFFF',fontWeight:'900',paddingHorizontal:9,paddingVertical:4,borderRadius:6}}>{Number(selectedProduct.rating||0).toFixed(1)} ★</Text><Text style={{fontSize:12,color:COLORS.muted}}>Product rating</Text></View>
+            <Text style={styles.detailPrice}>{money(selectedProduct.price)} {selectedProduct.original_price>selectedProduct.price?<Text style={{fontSize:14,color:'#98A39D',textDecorationLine:'line-through'}}>{money(selectedProduct.original_price)}</Text>:null}</Text>
+            {selectedProduct.discount_percent>0?<Text style={{alignSelf:'flex-start',backgroundColor:'#FFF0E5',color:'#E66B16',fontSize:11,fontWeight:'900',paddingHorizontal:9,paddingVertical:5,borderRadius:5}}>{selectedProduct.discount_percent}% Off</Text>:null}
+            <Text style={{fontSize:12,color:COLORS.muted}}>Availability: {selectedProduct.stock>0?'In Stock':'Check availability'}</Text>
+            <Text style={styles.detailDescription}>{selectedProduct.description||'Product information will be updated by the pharmacy.'}</Text>
+            <Text style={styles.detailNotice}>Availability and final dispensing decisions are subject to pharmacy confirmation.</Text>
+            <ActionButton title={selectedProduct.prescriptionRequired?'Prescription review required':'Add to cart'} onPress={()=>addToCart(selectedProduct)}/>
+          </View>
+        </View>
+        <View style={{marginTop:28,borderTopWidth:1,borderColor:COLORS.border,paddingTop:20}}>
+          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.detailDescription}>{selectedProduct.description||'No additional description has been provided for this product yet.'}</Text>
+        </View>
+        <View style={{marginTop:24,borderTopWidth:1,borderColor:COLORS.border,paddingTop:20}}>
+          <Text style={styles.sectionTitle}>Related Products</Text>
+          <View style={styles.productGrid}>{products.filter(p=>p.id!==selectedProduct.id&&((p.category_ids||[]).some(id=>(selectedProduct.category_ids||[]).includes(id))||p.category===selectedProduct.category)).slice(0,5).map(p=><ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':'48%'} imageResizeMode="contain" onAdd={addToCart} onOpen={()=>{setSelectedProduct(p);setSelectedProductImageIndex(0);}}/>)}</View>
+        </View>
       </View>
     );
     switch (tab) {
