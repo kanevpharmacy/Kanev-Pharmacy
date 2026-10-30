@@ -1020,8 +1020,12 @@ export default function App() {
   const Home = () => (
     <>
       <View style={[styles.tmTopStrip, isDesktop && { display: 'none' }]}>
-        <Text style={styles.tmTopStripText}>Kanev Pharmacy  •  Closer to Your Health  •  Zambia</Text>
-        <Pressable onPress={() => { if (session?.user) setTab('Account'); else { setAuthMode('signin'); setAuthModalVisible(true); } }}><Text style={styles.tmTopStripText}>Login / Sign up  ›</Text></Pressable>
+        <Pressable onPress={() => { setDeliverySearch(deliveryLocation.label === 'Zambia' ? '' : deliveryLocation.label); setDeliveryModalVisible(true); }} style={{flexDirection:'row',alignItems:'center',gap:5,flex:1,minWidth:0}}>
+          <Ionicons name="location-outline" size={14} color={COLORS.green}/>
+          <Text numberOfLines={1} style={styles.tmTopStripText}>Deliver to <Text style={{fontWeight:'900',color:COLORS.green}}>{deliveryLocation.label || 'Choose location'}</Text></Text>
+          <Ionicons name="chevron-down" size={12} color={COLORS.green}/>
+        </Pressable>
+        <Pressable onPress={() => { if (session?.user) setTab('Account'); else { setAuthMode('signin'); setAuthModalVisible(true); } }}><Text style={styles.tmTopStripText}>{session?.user ? 'My account' : 'Sign in'} ›</Text></Pressable>
       </View>
       <View style={styles.tmHero}>
         <View style={styles.tmHeroServices}>
@@ -1515,13 +1519,15 @@ export default function App() {
         <Pressable onPress={() => setSelectedProduct(null)} style={styles.backButton}><Ionicons name="arrow-back" size={21} color={COLORS.green} /><Text style={styles.backText}>Back to shop</Text></Pressable>
         <View style={{flexDirection:isDesktop?'row':'column',gap:22,alignItems:'flex-start'}}>
           <View style={{flex:isDesktop?1.05:undefined,minWidth:0,width:isDesktop?undefined:'100%',flexDirection:isDesktop?'row':'column',gap:12}}>
-            <View style={{flexDirection:isDesktop?'column':'row',gap:8,flexWrap:'wrap',justifyContent:'flex-start'}}>
+            {isDesktop ? <View style={{flexDirection:'column',gap:8,flexWrap:'wrap',justifyContent:'flex-start'}}>
               {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).map((url,index)=><Pressable key={url+index} onPress={()=>setSelectedProductImageIndex(index)} style={{width:68,height:68,borderRadius:9,borderWidth:selectedProductImageIndex===index?2:1,borderColor:selectedProductImageIndex===index?COLORS.blue:COLORS.border,backgroundColor:'#F7FAF8',padding:3,overflow:'hidden'}}><Image source={{uri:optimizedImageUrl(url,180,78)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/></Pressable>)}
-            </View>
+            </View> : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:'row',gap:8,paddingBottom:2}}>
+              {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).map((url,index)=><Pressable key={url+index} onPress={()=>setSelectedProductImageIndex(index)} style={{width:62,height:62,borderRadius:10,borderWidth:selectedProductImageIndex===index?2:1,borderColor:selectedProductImageIndex===index?COLORS.blue:COLORS.border,backgroundColor:'#F7FAF8',padding:3,overflow:'hidden'}}><Image source={{uri:optimizedImageUrl(url,180,78)}} resizeMode="contain" style={{width:'100%',height:'100%'}}/></Pressable>)}
+            </ScrollView>}
             <View
               onMouseEnter={()=>isDesktop&&setProductImageHoverZoom(true)}
               onMouseLeave={()=>setProductImageHoverZoom(false)}
-              style={{flex:1,minWidth:0,height:isDesktop?390:300,borderWidth:1,borderColor:COLORS.border,borderRadius:10,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12,overflow:'hidden'}}
+              style={{flex:1,minWidth:0,height:isDesktop?390:270,borderWidth:1,borderColor:COLORS.border,borderRadius:14,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',padding:12,overflow:'hidden'}}
             >
               {(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length ? <Image onContextMenu={event=>event.preventDefault()} onDragStart={event=>event.preventDefault()} source={{uri:optimizedImageUrl((Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[]))[Math.min(selectedProductImageIndex,(Array.isArray(selectedProduct.image_urls)&&selectedProduct.image_urls.length?selectedProduct.image_urls:(selectedProduct.image_url?[selectedProduct.image_url]:[])).length-1)],1600,90)}} resizeMode="contain" style={{width:'100%',height:'100%',transform:[{scale:productImageHoverZoom&&isDesktop?2.05:1}],...(Platform.OS==='web'?{userSelect:'none',WebkitUserSelect:'none',WebkitUserDrag:'none'}:{})}}/> : <Ionicons name={selectedProduct.icon||'medical-outline'} size={76} color={COLORS.green}/>}
             </View>
