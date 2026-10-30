@@ -1682,7 +1682,6 @@ export default function App() {
           {['Medicines', 'Personal Care', 'Wellness', 'Baby Care', 'Skincare', 'Medical Supplies'].map(label => <Pressable key={label} onPress={() => { setSelectedProduct(null); setSelectedProductImageIndex(0); setCategory(label); setTab('Shop'); }} style={styles.tmNavLink}><Text style={styles.tmNavText}>{label}</Text></Pressable>)}
         </ScrollView>}
       </View>}
-      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} keyboardShouldPersistTaps="handled">
       {!isDesktop && <View style={styles.mobileHeaderSearchWrap}>
         <View style={styles.mobileHeaderSearch}>
           <Ionicons name="search-outline" size={19} color={COLORS.muted}/>
@@ -1695,6 +1694,7 @@ export default function App() {
           <Pressable style={styles.headerSearchAll} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}}><Text style={styles.headerSearchAllText}>View all search results</Text><Ionicons name="arrow-forward" size={15} color={COLORS.blue}/></Pressable>
         </View>}
       </View>}
+      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} keyboardShouldPersistTaps="handled">
       {!isDesktop && <View style={styles.tmNavSticky}>
         {storeMenuItems.length ? <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tmNav} keyboardShouldPersistTaps="handled">
@@ -1735,6 +1735,8 @@ export default function App() {
           </View>
           <View style={styles.footerBottom}><Text style={styles.footerBottomText}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text><Text style={styles.footerBottomText}>Please use medicines responsibly and follow professional advice.</Text></View>
         </View>
+
+      </ScrollView>
       <View style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
         {[
           {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
@@ -1748,7 +1750,6 @@ export default function App() {
           </Pressable>
         ))}
       </View>
-      </ScrollView>
       {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
         <View style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
