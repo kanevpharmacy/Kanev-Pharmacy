@@ -1682,7 +1682,7 @@ export default function App() {
           {['Medicines', 'Personal Care', 'Wellness', 'Baby Care', 'Skincare', 'Medical Supplies'].map(label => <Pressable key={label} onPress={() => { setSelectedProduct(null); setSelectedProductImageIndex(0); setCategory(label); setTab('Shop'); }} style={styles.tmNavLink}><Text style={styles.tmNavText}>{label}</Text></Pressable>)}
         </ScrollView>}
       </View>}
-      {!isDesktop && <View style={styles.mobileHeaderSearchWrap}>
+{!isDesktop && tab !== 'Shop' && <View style={styles.mobileHeaderSearchWrap}>
         <View style={styles.mobileHeaderSearch}>
           <Ionicons name="search-outline" size={19} color={COLORS.muted}/>
           <TextInput value={query} onFocus={() => setHeaderSearchFocused(true)} onBlur={() => setTimeout(() => setHeaderSearchFocused(false), 350)} onChangeText={setQuery} onSubmitEditing={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}} placeholder="" placeholderTextColor="#7C8A84" style={styles.mobileHeaderSearchInput} returnKeyType="search" />
@@ -1694,7 +1694,19 @@ export default function App() {
           <Pressable style={styles.headerSearchAll} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}}><Text style={styles.headerSearchAllText}>View all search results</Text><Ionicons name="arrow-forward" size={15} color={COLORS.blue}/></Pressable>
         </View>}
       </View>}
-      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} stickyHeaderIndices={!isDesktop && tab === 'Shop' ? [1] : []} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={pageScrollRef} style={styles.scroll} contentContainerStyle={[styles.pageContent, isDesktop && styles.pageContentDesktop, isTablet && styles.pageContentTablet, !isDesktop && styles.pageContentMobile]} stickyHeaderIndices={!isDesktop && tab === 'Shop' ? [2] : []} keyboardShouldPersistTaps="handled">
+      {!isDesktop && tab === 'Shop' && <View style={styles.mobileHeaderSearchWrap}>
+        <View style={styles.mobileHeaderSearch}>
+          <Ionicons name="search-outline" size={19} color={COLORS.muted}/>
+          <TextInput value={query} onFocus={() => setHeaderSearchFocused(true)} onBlur={() => setTimeout(() => setHeaderSearchFocused(false), 350)} onChangeText={setQuery} onSubmitEditing={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}} placeholder="" placeholderTextColor="#7C8A84" style={styles.mobileHeaderSearchInput} returnKeyType="search" />
+          {!query.trim() && rotatingProducts.length > 0 && <View pointerEvents="none" style={styles.rotatingPlaceholderClipMobile}><Text style={[styles.rotatingPlaceholderText, { fontWeight: '700' }]}>Shop </Text><View style={styles.rotatingProductClip}><Animated.Text numberOfLines={1} style={[styles.rotatingPlaceholderText,{transform:[{translateY:placeholderSlide}]}]}>{rotatingProducts[placeholderIndex % rotatingProducts.length]}…</Animated.Text></View></View>}
+          <Pressable style={[styles.mobileHeaderSearchButton,{width:40,height:38,paddingHorizontal:0,borderRadius:20}]} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}} accessibilityLabel="Search products"><Ionicons name="search" size={19} color="#FFFFFF"/></Pressable>
+        </View>
+        {headerSearchFocused && query.trim().length > 0 && <View style={styles.mobileHeaderSearchDropdown}>
+          {catalogueLoading ? <Text style={styles.headerSearchNoResult}>Searching the product catalogue…</Text> : headerSearchMatches.length ? headerSearchMatches.map(p => <Pressable key={p.id} style={styles.headerSearchResult} onPress={() => {setSelectedProduct(p);setTab('Shop');setHeaderSearchFocused(false);}}><View style={styles.headerSearchResultIcon}>{p.image_url ? <Image source={{uri:p.image_url}} style={{width:34,height:34,borderRadius:8}} resizeMode="contain"/> : <Ionicons name="medical-outline" size={19} color={COLORS.green}/>}</View><View style={{flex:1,minWidth:0}}><Text numberOfLines={1} style={styles.headerSearchResultName}>{p.name}</Text><Text numberOfLines={1} style={styles.headerSearchResultMeta}>{p.category || p.brand || 'Pharmacy product'}</Text></View><Text style={styles.headerSearchResultPrice}>{money(p.price)}</Text></Pressable>) : <Text style={styles.headerSearchNoResult}>No matching products found.</Text>}
+          <Pressable style={styles.headerSearchAll} onPress={() => {setTab('Shop');setCategory('All');setHeaderSearchFocused(false);}}><Text style={styles.headerSearchAllText}>View all search results</Text><Ionicons name="arrow-forward" size={15} color={COLORS.blue}/></Pressable>
+        </View>}
+      </View>}
       {!isDesktop && <View style={styles.tmNavSticky}>
         {storeMenuItems.length ? <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tmNav} keyboardShouldPersistTaps="handled">
