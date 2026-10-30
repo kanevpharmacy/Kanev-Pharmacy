@@ -176,7 +176,7 @@ function KanevOrderProgress({ status, fulfilment }) {
 }
 
 export default function App() {
-  const { width: viewportWidth } = useWindowDimensions();
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isDesktop = viewportWidth >= 1024;
   const isTablet = viewportWidth >= 640 && viewportWidth < 1024;
   const [tab, setTab] = useState('Home');
@@ -1725,8 +1725,8 @@ export default function App() {
             })}
           </ScrollView>
           {Array.isArray(expandedMenuId) && expandedMenuId.some(id => !storeMenuItems.find(item => item.id === id)?.parent_id) && <>
-            <Pressable onPress={() => setExpandedMenuId([])} accessibilityRole="button" accessibilityLabel="Close category menu" style={{position:'absolute',top:0,left:-1000,right:-1000,height:Dimensions.get('window').height,backgroundColor:'rgba(7,28,20,0.16)',zIndex:90,elevation:16}} />
-            <View style={{position:'absolute',top:'100%',left:0,right:0,zIndex:100,elevation:18,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE8E0',borderTopWidth:2,borderTopColor:COLORS.green,borderBottomLeftRadius:16,borderBottomRightRadius:16,paddingHorizontal:12,paddingVertical:10,maxHeight:Math.round(Dimensions.get('window').height*0.5),shadowColor:'#0B3023',shadowOpacity:0.18,shadowRadius:16,shadowOffset:{width:0,height:8},overflow:'hidden'}}>
+            <Pressable onPress={() => setExpandedMenuId([])} accessibilityRole="button" accessibilityLabel="Close category menu" style={{position:'absolute',top:0,left:-1000,right:-1000,height:viewportHeight,backgroundColor:'rgba(7,28,20,0.16)',zIndex:90,elevation:16}} />
+            <View style={{position:'absolute',top:'100%',left:0,right:0,zIndex:100,elevation:18,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE8E0',borderTopWidth:2,borderTopColor:COLORS.green,borderBottomLeftRadius:16,borderBottomRightRadius:16,paddingHorizontal:12,paddingVertical:10,maxHeight:Math.round(viewportHeight*0.5),shadowColor:'#0B3023',shadowOpacity:0.18,shadowRadius:16,shadowOffset:{width:0,height:8},overflow:'hidden'}}>
               <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
                 {expandedMenuId.filter(id => !storeMenuItems.find(item => item.id === id)?.parent_id).map(rootId =>
                   <View key={rootId} style={{marginBottom:8}}>
