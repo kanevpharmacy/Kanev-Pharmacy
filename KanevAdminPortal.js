@@ -96,7 +96,7 @@ export default function KanevAdminPortal(){
  const {width}=useWindowDimensions(); const desktop=width>=980; const [session,setSession]=useState(null); const [role,setRole]=useState(''); const [checking,setChecking]=useState(true); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [busy,setBusy]=useState(false); const [page,setPage]=useState('Overview'); const [error,setError]=useState(''); const [documentPreview,setDocumentPreview]=useState(null); const [documentPreviewLoading,setDocumentPreviewLoading]=useState(false);
  const [stats,setStats]=useState({orders:0,pending:0,products:0,customers:0,revenue:0}); const [orders,setOrders]=useState([]); const [healthDocuments,setHealthDocuments]=useState([]); const [healthDocBusyId,setHealthDocBusyId]=useState(null);
  const [expandedHealthDocumentId,setExpandedHealthDocumentId]=useState(null); const [healthDocFeedback,setHealthDocFeedback]=useState({}); const [healthDocMessages,setHealthDocMessages]=useState({}); const [healthDocSendingId,setHealthDocSendingId]=useState(null); const [healthDocFilter,setHealthDocFilter]=useState('all'); const [expandedAdminOrderId,setExpandedAdminOrderId]=useState(null); const [expandedOrderId,setExpandedOrderId]=useState(null); const [orderItemsById,setOrderItemsById]=useState({}); const [orderItemsLoadingId,setOrderItemsLoadingId]=useState(null); const [products,setProducts]=useState([]); const [customers,setCustomers]=useState([]); const [categories,setCategories]=useState([]); const [loading,setLoading]=useState(false); const [search,setSearch]=useState('');
- const emptyProductForm={id:null,name:'',slug:'',description:'',price_zmw:'',original_price_zmw:'',rating:'5.0',stock_quantity:'0',low_stock_threshold:'5',expiry_date:'',brand:'',sku:'',image_url:'',category_id:'',category_ids:[],is_active:true,requires_prescription:false,scheduled_at:''};
+ const emptyProductForm={id:null,name:'',slug:'',description:'',price_zmw:'',original_price_zmw:'',rating:'5.0',stock_quantity:'0',low_stock_threshold:'5',expiry_date:'',brand:'',sku:'',image_url:'',image_urls:[],category_id:'',category_ids:[],is_active:true,requires_prescription:false,scheduled_at:''};
  const [productForm,setProductForm]=useState(emptyProductForm);
  const [productImageUploading,setProductImageUploading]=useState(false); const [newCategoryName,setNewCategoryName]=useState(''); const [categoryEditId,setCategoryEditId]=useState(null); const [categoryEditName,setCategoryEditName]=useState(''); const [categoryEditActive,setCategoryEditActive]=useState(true); const [categorySaving,setCategorySaving]=useState(false); const [newCategoryImageUrl,setNewCategoryImageUrl]=useState(''); const [categoryImageBusyId,setCategoryImageBusyId]=useState(null); const [newCategoryImageBusy,setNewCategoryImageBusy]=useState(false);
  const defaultBranding={id:'default',homepage_category_ids:[],pharmacy_title:'Kanev Pharmacy',tagline:'Closer to Your Health',logo_left_url:'',logo_form_url:'',header_logo_url:'',left_background_image_url:'',left_background_color:'#0B4B38',left_heading:'Closer to your health.',left_description:'Everyday essentials, trusted pharmacy care and a simpler way to look after your family.',benefit_one:'Your account, handled securely',benefit_two:'Keep track of your orders',benefit_three:'Care for every day',left_heading_color:'#FFFFFF',left_heading_size:29,left_heading_style:'bold',left_description_color:'#D8EAE2',left_description_size:13,left_description_style:'normal',benefit_color:'#F2FBF5',benefit_size:12,benefit_style:'bold',brand_title_color:'#0B4B38',brand_title_size:15,brand_title_style:'bold',tagline_color:'#246EB0',tagline_size:10,tagline_style:'normal',right_eyebrow_color:'#16805B',right_eyebrow_size:10,right_eyebrow_style:'bold',right_heading_color:'#172B24',right_heading_size:18,right_heading_style:'bold',right_intro_color:'#718078',right_intro_size:12,right_intro_style:'normal',left_heading_font_family:'System',left_description_font_family:'System',benefit_font_family:'System',brand_title_font_family:'System',tagline_font_family:'System',right_eyebrow_font_family:'System',right_heading_font_family:'System',right_intro_font_family:'System'};
@@ -221,23 +221,25 @@ export default function KanevAdminPortal(){
   try{
    setError('');
    const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
-   if(permission?.granted===false){setError('Please allow access to your photos/files to choose a product image.');return;}
-   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[1,1],quality:0.78});
-   if(result.canceled||!result.assets?.[0])return;
-   const asset=result.assets[0];
-   const mime=asset.mimeType||'image/jpeg';
-   const ext=(asset.fileName?.split('.').pop()||mime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-   if(!['jpg','jpeg','png','webp'].includes(ext)){setError('Choose a JPG, PNG or WebP image.');return;}
-   if(asset.fileSize&&asset.fileSize>5*1024*1024){setError('Choose an image smaller than 5 MB.');return;}
+   if(permission?.granted===false){setError('Please allow access to your photos/files to choose product images.');return;}
+   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsMultipleSelection:true,selectionLimit:8,quality:0.82});
+   if(result.canceled||!result.assets?.length)return;
    setProductImageUploading(true);
-   const response=await fetch(asset.uri); const blob=await response.blob();
-   const path=`products/${session.user.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-   const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
-   if(uploadError)throw uploadError;
-   const {data}=supabase.storage.from('product-images').getPublicUrl(path);
-   setProductForm(prev=>({...prev,image_url:data.publicUrl}));
-   setError('Product image uploaded. Save the product to publish it.');
-  }catch(e){setError(`Product image upload failed: ${e?.message||'check the product-images storage setup and permissions.'}`);}
+   const uploaded=[];
+   for(const asset of result.assets){
+    const mime=asset.mimeType||'image/jpeg';
+    const ext=(asset.fileName?.split('.').pop()||mime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    if(!['jpg','jpeg','png','webp'].includes(ext))throw new Error('Choose JPG, PNG or WebP images only.');
+    if(asset.fileSize&&asset.fileSize>5*1024*1024)throw new Error('Each product image must be smaller than 5 MB.');
+    const response=await fetch(asset.uri);const blob=await response.blob();
+    const path=`products/${session.user.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
+    if(uploadError)throw uploadError;
+    uploaded.push(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl);
+   }
+   setProductForm(prev=>{const images=Array.from(new Set([...(prev.image_urls||[]),...uploaded]));return {...prev,image_urls:images,image_url:prev.image_url||images[0]||''};});
+   setError(`${uploaded.length} product image(s) uploaded. Save the product to publish them.`);
+  }catch(e){setError(`Product image upload failed: ${e?.message||'check product-images storage permissions.'}`);}
   finally{setProductImageUploading(false);}
  }
  async function uploadCategoryImage(categoryId=null){
@@ -398,7 +400,7 @@ export default function KanevAdminPortal(){
    const usedSlugs=new Set((slugRows||[]).filter(item=>item.id!==productForm.id).map(item=>String(item.slug||'').trim().toLowerCase()).filter(Boolean));
    let uniqueSlug=slugBase,slugSuffix=2;
    while(usedSlugs.has(uniqueSlug.toLowerCase()))uniqueSlug=`${slugBase}-${slugSuffix++}`;
-   const row={name:productForm.name.trim(),slug:uniqueSlug,description:(productForm.description||'').trim()||null,brand:(productForm.brand||'').trim()||null,sku:(productForm.sku||'').trim()||null,image_url:(productForm.image_url||'').trim()||null,category_id:productForm.category_id||selectedCategoryIds[0],price_zmw:Number(productForm.price_zmw),original_price_zmw:productForm.original_price_zmw&&Number(productForm.original_price_zmw)>Number(productForm.price_zmw)?Number(productForm.original_price_zmw):null,rating:Math.min(5,Math.max(0,Number(productForm.rating||5))),stock_quantity:Math.max(0,Math.floor(Number(productForm.stock_quantity||0))),low_stock_threshold:Math.max(0,Math.floor(Number(productForm.low_stock_threshold||0))),expiry_date:String(productForm.expiry_date||'').trim()||null,is_active:isScheduled?false:(productForm.id?!!productForm.is_active:true),requires_prescription:!!productForm.requires_prescription,scheduled_at:isScheduled?new Date(Date.parse(scheduledAt)).toISOString():null,updated_at:new Date().toISOString()};
+   const row={name:productForm.name.trim(),slug:uniqueSlug,description:(productForm.description||'').trim()||null,brand:(productForm.brand||'').trim()||null,sku:(productForm.sku||'').trim()||null,image_url:(productForm.image_url||'').trim()||null,image_urls:Array.from(new Set([...(productForm.image_urls||[]),productForm.image_url].filter(Boolean))),category_id:productForm.category_id||selectedCategoryIds[0],price_zmw:Number(productForm.price_zmw),original_price_zmw:productForm.original_price_zmw&&Number(productForm.original_price_zmw)>Number(productForm.price_zmw)?Number(productForm.original_price_zmw):null,rating:Math.min(5,Math.max(0,Number(productForm.rating||5))),stock_quantity:Math.max(0,Math.floor(Number(productForm.stock_quantity||0))),low_stock_threshold:Math.max(0,Math.floor(Number(productForm.low_stock_threshold||0))),expiry_date:String(productForm.expiry_date||'').trim()||null,is_active:isScheduled?false:(productForm.id?!!productForm.is_active:true),requires_prescription:!!productForm.requires_prescription,scheduled_at:isScheduled?new Date(Date.parse(scheduledAt)).toISOString():null,updated_at:new Date().toISOString()};
    let savedProductId=productForm.id;
    if(productForm.id){
     const result=await supabase.from('products').update(row).eq('id',productForm.id);
@@ -445,7 +447,7 @@ export default function KanevAdminPortal(){
   finally{setBusy(false);}
  }
  function editInventoryProduct(p){
-  setProductForm({...emptyProductForm,id:p.id,name:p.name||'',slug:p.slug||'',description:p.description||'',price_zmw:String(p.price_zmw??''),original_price_zmw:String(p.original_price_zmw??''),rating:String(p.rating??5),stock_quantity:String(p.stock_quantity??0),low_stock_threshold:String(p.low_stock_threshold??5),expiry_date:p.expiry_date||'',brand:p.brand||'',sku:p.sku||'',image_url:p.image_url||'',category_id:p.category_id||'',category_ids:p.category_ids?.length?p.category_ids:(p.category_id?[p.category_id]:[]),is_active:!!p.is_active,requires_prescription:!!p.requires_prescription,scheduled_at:p.scheduled_at||''});
+  setProductForm({...emptyProductForm,id:p.id,name:p.name||'',slug:p.slug||'',description:p.description||'',price_zmw:String(p.price_zmw??''),original_price_zmw:String(p.original_price_zmw??''),rating:String(p.rating??5),stock_quantity:String(p.stock_quantity??0),low_stock_threshold:String(p.low_stock_threshold??5),expiry_date:p.expiry_date||'',brand:p.brand||'',sku:p.sku||'',image_url:p.image_url||'',image_urls:Array.isArray(p.image_urls)&&p.image_urls.length?p.image_urls:(p.image_url?[p.image_url]:[]),category_id:p.category_id||'',category_ids:p.category_ids?.length?p.category_ids:(p.category_id?[p.category_id]:[]),is_active:!!p.is_active,requires_prescription:!!p.requires_prescription,scheduled_at:p.scheduled_at||''});
   setPage('Products');setSearch('');setError(`Editing ${p.name}. Update the fields and save your changes.`);
  }
  async function toggleProductPause(p){
@@ -781,11 +783,13 @@ if(page==='Overview')return <><View style={s.pageHead}><View><Text style={s.page
     </View>
     <View style={[s.formGrid,{flexWrap:'wrap'}]}><View style={{flex:1,minWidth:180}}><Field label="Brand" value={productForm.brand} onChangeText={v=>setProductForm({...productForm,brand:v})}/></View><View style={{flex:1,minWidth:180}}><Field label="SKU / barcode" value={productForm.sku} onChangeText={v=>setProductForm({...productForm,sku:v})}/></View></View>
     <View style={{borderWidth:1,borderColor:LINE,borderRadius:13,padding:12,marginBottom:14,backgroundColor:'#FBFDFC',gap:10}}>
-     <Text style={s.label}>Product image</Text>
-     <View style={{flexDirection:'row',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-      {productForm.image_url?<Image source={{uri:productForm.image_url}} resizeMode="contain" style={{width:112,height:112,borderRadius:10,borderWidth:1,borderColor:LINE,backgroundColor:'#fff'}}/>:<View style={{width:112,height:112,borderRadius:10,borderWidth:1,borderStyle:'dashed',borderColor:'#B9CCC1',backgroundColor:'#F4F8F5',alignItems:'center',justifyContent:'center',gap:6}}><Ionicons name="image-outline" size={28} color={MUTED}/><Text style={{fontSize:11,color:MUTED}}>No image selected</Text></View>}
-      <View style={{flex:1,minWidth:190,gap:8}}><Btn onPress={chooseProductImage} disabled={productImageUploading}>{productImageUploading?'Uploading image…':'Choose image from device'}</Btn>{productForm.image_url?<Btn outline onPress={()=>setProductForm({...productForm,image_url:''})}>Remove image</Btn>:null}<Text style={s.muted}>JPG, PNG or WebP · Maximum 5 MB. Recommended size: 1200 × 800 px (landscape, 3:2). Keep the product centred; images may be cropped slightly to fit product cards. The image is uploaded to pharmacy storage; you do not need to paste a URL.</Text></View>
+     <Text style={s.label}>Product images (up to 8)</Text>
+     <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
+      {(productForm.image_urls|| (productForm.image_url?[productForm.image_url]:[])).map((url,index)=><View key={url+index} style={{width:92,gap:4}}><Image source={{uri:url}} resizeMode="contain" style={{width:88,height:88,borderRadius:9,borderWidth:1,borderColor:LINE,backgroundColor:'#fff'}}/><Text style={{fontSize:10,color:index===0?GREEN:MUTED,fontWeight:index===0?'900':'600'}}>{index===0?'Main image':`Image ${index+1}`}</Text><Btn outline onPress={()=>setProductForm(prev=>{const images=(prev.image_urls||[prev.image_url].filter(Boolean)).filter((_,i)=>i!==index);return {...prev,image_urls:images,image_url:images[0]||''};})}>Remove</Btn></View>)}
+      {!(productForm.image_urls||[]).length&&!productForm.image_url?<View style={{width:92,height:88,borderRadius:9,borderWidth:1,borderStyle:'dashed',borderColor:'#B9CCC1',alignItems:'center',justifyContent:'center'}}><Ionicons name="image-outline" size={27} color={MUTED}/><Text style={{fontSize:10,color:MUTED}}>No images</Text></View>:null}
      </View>
+     <Btn outline onPress={chooseProductImage} disabled={productImageUploading}>{productImageUploading?'Uploading images…':'Add images from device'}</Btn>
+     <Text style={s.muted}>Choose one or more JPG, PNG or WebP images (up to 8 total, maximum 5 MB each). The first image is the main product image. Recommended: 1200 × 1200 px, product centred on a clean background. Images upload directly to pharmacy storage.</Text>
     </View>
     <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}><Btn onPress={saveProduct} disabled={busy||productImageUploading}>{busy?'Saving…':productForm.id?'Update product':'Save product'}</Btn><Btn outline onPress={()=>setProductForm({...emptyProductForm})}>{productForm.id?'Cancel edit':'Clear form'}</Btn></View>
     <Text style={s.muted}>Products are assigned to a catalogue category. Menu navigation labels remain managed in Menu Management.</Text>
