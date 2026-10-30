@@ -108,7 +108,7 @@ function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 
     <View style={[styles.productCard,{width:cardWidth,flexBasis:cardWidth,maxWidth:cardWidth}]}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
         <View style={[styles.productImage, { backgroundColor: '#F6F9F7', height: imageHeight }]}>
-          {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%' }} resizeMode={imageResizeMode} /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
+          {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode={imageResizeMode} /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
           <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View>
           {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% Off</Text></View> : null}
         </View>
@@ -1682,7 +1682,7 @@ const styles = StyleSheet.create({
   megaFeatureSub:{fontSize:10,color:COLORS.blue,marginTop:5},
   carouselSection:{marginBottom:24},
   productCarousel:{gap:12,paddingVertical:4,paddingRight:6},
-  carouselProduct:{width:225},
+  carouselProduct:{width:180},
   carouselEmpty:{backgroundColor:'#FFFFFF',borderWidth:1,borderColor:COLORS.border,borderRadius:13,padding:18,flexDirection:'row',alignItems:'center',gap:12},
   carouselEmptyTitle:{fontSize:13,fontWeight:'900',color:COLORS.ink,marginBottom:4},
   orderVia:{backgroundColor:'#EAF2FD',borderRadius:17,padding:20,marginBottom:24},
