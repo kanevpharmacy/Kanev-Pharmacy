@@ -500,6 +500,26 @@ export default function App() {
     return matchesCategory && (!term || [p.name,p.brand,p.category,...(p.categories_list||[]),p.subcategory,p.description,p.slug,p.sku,p.barcode].some(value => String(value || '').toLowerCase().includes(term)));
   }), [products, query, category]);
 
+  const activeShopMenu = storeMenuItems.filter(item => item.is_active !== false);
+  const shopMenuRoots = activeShopMenu.filter(item => !item.parent_id);
+  const shopCategoryNodes = activeShopMenu.filter(item => item.parent_id && shopMenuRoots.some(root => root.id === item.parent_id));
+  const selectedShopCategoryNode = shopCategoryNodes.find(item => item.label === category);
+  const getShopCategoryDescendants = id => [id, ...activeShopMenu.filter(item => item.parent_id === id).flatMap(child => getShopCategoryDescendants(child.id))];
+  const selectedShopCategoryIds = selectedShopCategoryNode ? new Set(getShopCategoryDescendants(selectedShopCategoryNode.id)) : null;
+  const shopFiltered = products.filter(p => {
+    const term = query.trim().toLowerCase();
+    const searchOk = !term || [p.name,p.brand,p.category,...(p.categories_list || []),p.subcategory,p.description,p.slug,p.sku,p.barcode].some(value => String(value || '').toLowerCase().includes(term));
+    const categoryOk = category === 'All' || (selectedShopCategoryNode
+      ? (p.menu_subcategory_id && selectedShopCategoryIds.has(p.menu_subcategory_id)) || (p.categories_list || []).some(name => String(name).toLowerCase() === category.toLowerCase()) || String(p.category || '').toLowerCase() === category.toLowerCase()
+      : p.category === category || (p.categories_list || []).includes(category));
+    return searchOk && categoryOk;
+  });
+  const shopProductGroups = category === 'All' ? [] : Object.entries(shopFiltered.reduce((groups, product) => {
+    const name = product.subcategory || 'Other products';
+    (groups[name] ||= []).push(product);
+    return groups;
+  }, {}));
+
   const addToCart = (product) => {
     if (product.stock !== undefined && product.stock < 1) return notify('Out of stock', 'This product is currently unavailable.');
     const inCart = cart.find(item => item.id === product.id);
@@ -1122,17 +1142,22 @@ export default function App() {
         {query.length > 0 && <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={19} color={COLORS.muted} /></Pressable>}
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 14 }}>
-        {['All', ...CATEGORIES.map(c => c.name)].map(c => (
+        {['All', ...shopCategoryNodes.map(item => item.label)].map(c => (
           <Pressable key={c} onPress={() => setCategory(c)} style={[styles.filterChip, category === c && styles.filterChipActive]}>
             <Text style={[styles.filterChipText, category === c && styles.filterChipTextActive]}>{c}</Text>
           </Pressable>
         ))}
       </ScrollView>
-      <Text style={styles.resultsText}>{filtered.length} {filtered.length === 1 ? 'product' : 'products'}{query.trim() ? ` found for “${query.trim()}”` : category !== 'All' ? ` in ${category}` : ' available'}</Text>
-      <View style={styles.productGrid}>
-        {filtered.map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} onOpen={() => setSelectedProduct(p)} />)}
-      </View>
-      {filtered.length === 0 && <View style={styles.searchEmptyState}>
+      <Text style={styles.resultsText}>{shopFiltered.length} {shopFiltered.length === 1 ? 'product' : 'products'}{query.trim() ? ` found for “${query.trim()}”` : category !== 'All' ? ` in ${category}` : ' available'}</Text>
+      {category === 'All' ? <View style={styles.productGrid}>
+        {shopFiltered.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => setSelectedProduct(p)} />)}
+      </View> : shopProductGroups.map(([groupName, groupProducts]) => (
+        <View key={groupName} style={{marginBottom:22}}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{groupName}</Text><Text style={styles.homeSectionSub}>{groupProducts.length} {groupProducts.length===1?'product':'products'}</Text></View>
+          <View style={styles.productGrid}>{groupProducts.map(p => <ProductCard key={p.id} product={p} imageResizeMode="cover" onAdd={addToCart} onOpen={() => setSelectedProduct(p)} />)}</View>
+        </View>
+      ))}
+      {shopFiltered.length === 0 && <View style={styles.searchEmptyState}>
         <View style={styles.searchEmptyIcon}><Ionicons name="search-outline" size={30} color={COLORS.green}/></View>
         <Text style={styles.emptyTitle}>{query.trim() ? `No results for “${query.trim()}”` : 'No products in this category yet'}</Text>
         <Text style={styles.emptyBody}>Try a different product name, brand or category. You can also clear the filters and browse the full catalogue.</Text>
