@@ -27,6 +27,11 @@ function Image({ loading, ...props }) {
   return <NativeImage {...webProps} {...props} />;
 }
 
+// Mobile browsers already manage their own browser/system safe areas. Applying
+// React Native's SafeAreaView to the web root can add large blank bands in
+// browsers that report browser-chrome insets as page insets.
+const AppSafeAreaView = Platform.OS === 'web' ? View : SafeAreaView;
+
 const money = (amount) => `K${Number(amount).toFixed(2)}`;
 
 // Request appropriately sized, compressed variants from Supabase Storage.
@@ -1663,12 +1668,12 @@ export default function App() {
   // Keep the storefront hidden until the saved session has been classified.
   if (!authInitialized) {
     return (
-      <SafeAreaView style={[styles.safe, { alignItems: 'center', justifyContent: 'center' }]}>
+      <AppSafeAreaView style={[styles.safe, { alignItems: 'center', justifyContent: 'center' }]}>
         <ExpoStatusBar style="dark" />
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
         {(loginBranding.loading_logo_url || loginBranding.header_logo_url || cachedStartupLogoUrl) ? <Image loading="eager" source={{ uri: loginBranding.loading_logo_url || loginBranding.header_logo_url || cachedStartupLogoUrl }} resizeMode="contain" style={{ width: 132, height: 132 }} /> : null}
         <Text style={styles.brandName}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
-      </SafeAreaView>
+      </AppSafeAreaView>
     );
   }
 
@@ -1678,7 +1683,7 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <AppSafeAreaView style={styles.safe}>
       <ExpoStatusBar style="dark" />
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       {Header()}
@@ -1867,7 +1872,7 @@ export default function App() {
         tone={notice.tone}
         onClose={() => setNotice(current => ({ ...current, visible: false }))}
       />
-    </SafeAreaView>
+    </AppSafeAreaView>
   );
 }
 
