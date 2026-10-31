@@ -464,7 +464,7 @@ export default function App() {
         // Fetch branding alongside session restoration so the configured startup
         // logo is ready before the existing startup screen is rendered.
         const { data: brandingData, error: brandingError } = await supabase
-          .from('app_login_branding').select('loading_logo_url,pharmacy_title,tagline').eq('id', 'default').maybeSingle();
+          .from('app_login_branding').select('*').eq('id', 'default').maybeSingle();
         if (!active) return;
         if (!brandingError && brandingData) {
           setLoginBranding(current => ({ ...current, ...brandingData }));
