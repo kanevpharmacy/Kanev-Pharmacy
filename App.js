@@ -671,7 +671,7 @@ export default function App() {
     if (error) { console.warn('Health documents could not load:',error.message); return; }
     const docs=await Promise.all((data||[]).map(async doc=>{ if(!doc.file_path)return doc; const {data:signed,error:signedError}=await supabase.storage.from('customer-health-documents').createSignedUrl(doc.file_path,3600); if(signedError)console.warn('Could not create health document preview URL:',signedError.message); return {...doc,preview_url:signed?.signedUrl||null}; })); setHealthDocuments(docs);
     if (!docs.length) { setHealthDocMessages({}); return; }
-    const {data:messages,error:messageError}=await supabase.from('customer_health_document_messages').select('id,document_id,sender_id,sender_role,message,created_at').in('document_id',docs.map(d=>d.id)).order('created_at',{ascending:true});
+    const {data:messages,error:messageError}=await supabase.from('customer_health_document_messages').select('id,document_id,sender_id,sender_role,message,created_at,read_at,read_by').in('document_id',docs.map(d=>d.id)).order('created_at',{ascending:true});
     if (!messageError) { const grouped={}; (messages||[]).forEach(m=>{(grouped[m.document_id] ||= []).push(m);}); setHealthDocMessages(grouped); }
     else console.warn('Conversation messages could not load:',messageError.message);
   },[session?.user?.id]);
@@ -685,6 +685,20 @@ export default function App() {
       .subscribe();
     return ()=>{supabase.removeChannel(channel);};
   },[session?.user?.id,loadHealthDocuments,healthDocuments.map(d=>d.id).join('|')]);
+  const markHealthDocumentRead = async (doc) => {
+    if (!doc?.id || !session?.user?.id) return;
+    const unread=(healthDocMessages[doc.id]||[]).filter(m=>m.sender_role==='admin'&&!m.read_at);
+    if (!unread.length) return;
+    const readAt=new Date().toISOString();
+    setHealthDocMessages(prev=>({...prev,[doc.id]:(prev[doc.id]||[]).map(m=>m.sender_role==='admin'&&!m.read_at?{...m,read_at:readAt,read_by:session.user.id}:m)}));
+    const {error}=await supabase.rpc('mark_customer_health_document_messages_read',{p_document_id:doc.id});
+    if(error){console.warn('Could not save message read receipt:',error.message);await loadHealthDocuments();}
+  };
+  const toggleHealthDocument = (doc, expanded) => {
+    setExpandedHealthDocumentId(expanded?null:doc.id);
+    if(!expanded) markHealthDocumentRead(doc);
+  };
+
   const sendHealthDocumentReply = async (doc) => {
     const message=String(healthDocReplyDrafts[doc.id]||'').trim();
     if(!message) return notify('Write a reply','Enter a message before sending.');
@@ -1453,7 +1467,7 @@ export default function App() {
         <View style={[styles.myAccountLayout, isDesktop && styles.myAccountLayoutDesktop]}>
           <View style={[styles.myAccountSidebar,isDesktop&&{width:250,flexShrink:0}]}>
             <Text style={styles.myAccountMenuHeading}>MY ACCOUNT</Text>
-            {[['person-outline','Profile','profile'],['cube-outline','My Orders','orders'],['document-text-outline','Prescriptions','prescriptions'],['cart-outline','My Cart','cart'],['help-circle-outline','Help & Support','support']].map(([icon,label,key])=><Pressable key={key} onPress={()=>{if(key==='cart'){setTab('Cart');return;}if(key==='orders'){if(!isDesktop){setTab('Orders');return;}setAccountSection('orders');return;}if(key==='profile'){setAccountSection('profile');return;}if(key==='prescriptions'){setTab('HealthDocuments');return;}notify('Kanev Pharmacy support','Please contact the pharmacy team for help with your account, orders or prescriptions.');}} style={[styles.myAccountMenuItem,accountSection===key&&styles.myAccountMenuItemActive]}><Ionicons name={icon} size={19} color={accountSection===key?COLORS.blue:COLORS.muted}/><Text style={[styles.myAccountMenuText,accountSection===key&&styles.myAccountMenuTextActive]}>{label}</Text>{key==='orders'&&orders.length>0?<View style={styles.myAccountCount}><Text style={styles.myAccountCountText}>{orders.length}</Text></View>:null}{key==='prescriptions'&&healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin').length>0?<View style={[styles.myAccountCount,{backgroundColor:'#DBEAFE',borderWidth:1,borderColor:'#93C5FD'}]}><Text style={[styles.myAccountCountText,{color:'#1D4ED8'}]}>{healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin').length}</Text></View>:null}</Pressable>)}
+            {[['person-outline','Profile','profile'],['cube-outline','My Orders','orders'],['document-text-outline','Prescriptions','prescriptions'],['cart-outline','My Cart','cart'],['help-circle-outline','Help & Support','support']].map(([icon,label,key])=><Pressable key={key} onPress={()=>{if(key==='cart'){setTab('Cart');return;}if(key==='orders'){if(!isDesktop){setTab('Orders');return;}setAccountSection('orders');return;}if(key==='profile'){setAccountSection('profile');return;}if(key==='prescriptions'){setTab('HealthDocuments');return;}notify('Kanev Pharmacy support','Please contact the pharmacy team for help with your account, orders or prescriptions.');}} style={[styles.myAccountMenuItem,accountSection===key&&styles.myAccountMenuItemActive]}><Ionicons name={icon} size={19} color={accountSection===key?COLORS.blue:COLORS.muted}/><Text style={[styles.myAccountMenuText,accountSection===key&&styles.myAccountMenuTextActive]}>{label}</Text>{key==='orders'&&orders.length>0?<View style={styles.myAccountCount}><Text style={styles.myAccountCountText}>{orders.length}</Text></View>:null}{key==='prescriptions'&&healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length>0?<View style={[styles.myAccountCount,{backgroundColor:'#DBEAFE',borderWidth:1,borderColor:'#93C5FD'}]}><Text style={[styles.myAccountCountText,{color:'#1D4ED8'}]}>{healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length}</Text></View>:null}</Pressable>)}
             <View style={styles.myAccountSidebarFooter}><Ionicons name="heart-outline" size={18} color={COLORS.green}/><Text style={styles.myAccountSidebarFooterText}>Here for your everyday health.</Text></View>
           </View>
           <View style={styles.myAccountMain}>
@@ -1507,13 +1521,13 @@ export default function App() {
                 const messages=healthDocMessages[doc.id]||[], closed=!!doc.conversation_closed_at;
                 const expanded = expandedHealthDocumentId === doc.id;
                 return <View key={doc.id} style={[styles.myAccountOrderRow,{alignItems:'stretch',marginBottom:8,paddingVertical:0}]}>
-                  <Pressable onPress={()=>setExpandedHealthDocumentId(expanded?null:doc.id)} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:11}}>
+                  <Pressable onPress={()=>toggleHealthDocument(doc,expanded)} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:11}}>
                     <View style={[styles.myAccountOrderIcon,{width:36,height:36}]}><Ionicons name={doc.document_type==='prescription'?'document-text-outline':'flask-outline'} size={19} color={COLORS.green}/></View>
                     <View style={{flex:1,minWidth:0,gap:3}}>
                       <Text style={styles.accountRowTitle}>{healthDocumentNumber(doc)}</Text>
                       <Text style={styles.accountRowSub}>{new Date(doc.created_at).toLocaleString()}</Text>
                     </View>
-                    <View style={{alignItems:'flex-end',gap:4}}><View style={{paddingHorizontal:8,paddingVertical:5,borderRadius:7,backgroundColor:doc.status==='completed'?'#E0F2E8':'#EEF1EF'}}><Text style={{fontSize:10,fontWeight:'900',color:COLORS.green}}>{String(doc.status||'submitted').replaceAll('_',' ')}</Text></View>{(healthDocMessages[doc.id]||[]).slice(-1)[0]?.sender_role==='admin'?<View style={{paddingHorizontal:8,paddingVertical:4,borderRadius:7,backgroundColor:'#DBEAFE',borderWidth:1,borderColor:'#93C5FD'}}><Text style={{fontSize:9,fontWeight:'900',color:'#1D4ED8'}}>NEW REPLY</Text></View>:null}</View>
+                    <View style={{alignItems:'flex-end',gap:4}}><View style={{paddingHorizontal:8,paddingVertical:5,borderRadius:7,backgroundColor:doc.status==='completed'?'#E0F2E8':'#EEF1EF'}}><Text style={{fontSize:10,fontWeight:'900',color:COLORS.green}}>{String(doc.status||'submitted').replaceAll('_',' ')}</Text></View>{(healthDocMessages[doc.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[doc.id]||[]).slice(-1)[0]?.read_at?<View style={{paddingHorizontal:8,paddingVertical:4,borderRadius:7,backgroundColor:'#DBEAFE',borderWidth:1,borderColor:'#93C5FD'}}><Text style={{fontSize:9,fontWeight:'900',color:'#1D4ED8'}}>NEW REPLY</Text></View>:null}</View>
                     <Ionicons name={expanded?'chevron-up':'chevron-down'} size={17} color={COLORS.muted}/>
                   </Pressable>
                   {expanded ? <View style={{paddingBottom:12,gap:7}}>
@@ -1611,7 +1625,7 @@ export default function App() {
                 const messages=healthDocMessages[doc.id]||[], closed=!!doc.conversation_closed_at;
                 const expanded = expandedHealthDocumentId === doc.id;
                 return <View key={doc.id} style={[styles.myAccountOrderRow,{flexDirection:'column',alignItems:'stretch',width:'100%',minWidth:0,marginBottom:10,paddingVertical:0},!isDesktop&&{borderWidth:1,borderColor:COLORS.border,borderRadius:13,backgroundColor:'#FFFFFF',paddingHorizontal:12,overflow:'hidden'}]}>
-                  <Pressable onPress={()=>setExpandedHealthDocumentId(expanded?null:doc.id)} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:12,flexWrap:'wrap'}}>
+                  <Pressable onPress={()=>toggleHealthDocument(doc,expanded)} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:12,flexWrap:'wrap'}}>
                     <View style={[styles.myAccountOrderIcon,{width:36,height:36}]}><Ionicons name={doc.document_type==='prescription'?'document-text-outline':'flask-outline'} size={19} color={COLORS.green}/></View>
                     <View style={{flex:1,minWidth:0,gap:3}}>
                       <Text style={styles.accountRowTitle}>{healthDocumentNumber(doc)}</Text>
@@ -1619,7 +1633,7 @@ export default function App() {
                     </View>
                     <View style={{alignItems:'flex-end',gap:5}}>
                       <View style={{paddingHorizontal:8,paddingVertical:5,borderRadius:7,backgroundColor:doc.status==='completed'?'#E0F2E8':'#EEF1EF'}}><Text style={{fontSize:10,fontWeight:'900',color:COLORS.green}}>{String(doc.status||'submitted').replaceAll('_',' ')}</Text></View>
-                      {(healthDocMessages[doc.id]||[]).slice(-1)[0]?.sender_role==='admin'?<View style={{paddingHorizontal:9,paddingVertical:5,borderRadius:8,backgroundColor:'#DBEAFE',borderWidth:1,borderColor:'#93C5FD'}}><Text style={{fontSize:9,fontWeight:'900',color:'#1D4ED8'}}>NEW REPLY</Text></View>:null}
+                      {(healthDocMessages[doc.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[doc.id]||[]).slice(-1)[0]?.read_at?<View style={{paddingHorizontal:9,paddingVertical:5,borderRadius:8,backgroundColor:'#DBEAFE',borderWidth:1,borderColor:'#93C5FD'}}><Text style={{fontSize:9,fontWeight:'900',color:'#1D4ED8'}}>NEW REPLY</Text></View>:null}
                     </View>
                     <Ionicons name={expanded?'chevron-up':'chevron-down'} size={17} color={COLORS.muted}/>
                   </Pressable>
@@ -1855,7 +1869,7 @@ export default function App() {
         {[
           {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
           {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
-          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,badge:healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin').length,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
+          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,badge:healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
           {name:'Account',icon:'person-outline',active:(tab==='Account'||tab==='Orders')&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
         ].map(item=>(
           <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
@@ -1867,13 +1881,13 @@ export default function App() {
       {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
         <View style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12,gap:10}}>
-            <View style={{flex:1}}><Text style={{fontSize:16,fontWeight:'900',color:COLORS.ink}}>Healthcare services</Text><Text style={{fontSize:11,color:COLORS.muted,marginTop:3}}>Choose a service to continue</Text>{healthDocuments.some(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin')?<Text style={{fontSize:10,fontWeight:'800',color:'#1D4ED8',marginTop:5}}>You have new pharmacy replies</Text>:null}</View>
+            <View style={{flex:1}}><Text style={{fontSize:16,fontWeight:'900',color:COLORS.ink}}>Healthcare services</Text><Text style={{fontSize:11,color:COLORS.muted,marginTop:3}}>Choose a service to continue</Text>{healthDocuments.some(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at)?<Text style={{fontSize:10,fontWeight:'800',color:'#1D4ED8',marginTop:5}}>You have new pharmacy replies</Text>:null}</View>
             <Pressable onPress={()=>setMobileServicesOpen(false)} style={{width:32,height:32,borderRadius:16,backgroundColor:'#F1F7F3',alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={19} color={COLORS.green}/></Pressable>
           </View>
           <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
             {[
-              {title:'Upload prescription',sub:'Send for pharmacy review',icon:'document-text-outline',badge:healthDocuments.filter(d=>d.document_type==='prescription'&&(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin').length,run:()=>{setHealthDocType('prescription');if(session?.user)setTab(isDesktop?'HealthDocuments':'Prescriptions');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
-              {title:'Lab test results',sub:'Upload and view lab documents',icon:'flask-outline',badge:healthDocuments.filter(d=>d.document_type==='lab_result'&&(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin').length,run:()=>{setHealthDocType('lab_result');if(session?.user)setTab(isDesktop?'HealthDocuments':'LabResults');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
+              {title:'Upload prescription',sub:'Send for pharmacy review',icon:'document-text-outline',badge:healthDocuments.filter(d=>d.document_type==='prescription'&&(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length,run:()=>{setHealthDocType('prescription');if(session?.user)setTab(isDesktop?'HealthDocuments':'Prescriptions');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
+              {title:'Lab test results',sub:'Upload and view lab documents',icon:'flask-outline',badge:healthDocuments.filter(d=>d.document_type==='lab_result'&&(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length,run:()=>{setHealthDocType('lab_result');if(session?.user)setTab(isDesktop?'HealthDocuments':'LabResults');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
               {title:'Delivery',sub:'Delivery information and tracking',icon:'car-outline',run:()=>{if(session?.user){if(!isDesktop){setTab('Orders');}else{setAccountSection('orders');setTab('Account');}}else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
               {title:'Health insurance',sub:'Insurance and co-pay support',icon:'shield-checkmark-outline',run:()=>notify('Health insurance','Contact Kanev Pharmacy to confirm accepted insurance providers and co-pay arrangements.')},
             ].map(item=><Pressable key={item.title} onPress={()=>{setMobileServicesOpen(false);setSelectedProduct(null);item.run();}} style={{width:'48%',flexGrow:1,minHeight:92,borderRadius:13,borderWidth:1,borderColor:'#E1EBE5',backgroundColor:'#FBFDFC',padding:11,gap:6}}>
