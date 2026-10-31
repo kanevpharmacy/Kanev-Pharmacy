@@ -1865,7 +1865,7 @@ export default function App() {
         </View>
 
       </ScrollView>
-      <View style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
+      <View pointerEvents="box-none" style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
         {[
           {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
           {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
@@ -2296,7 +2296,7 @@ const styles = StyleSheet.create({
   footerBrand: { color: COLORS.green, fontWeight: '900', fontSize: 14 },
   footerTagline: { color: COLORS.blue, fontWeight: '700', fontSize: 11, marginTop: 3 },
   footerSmall: { color: COLORS.muted, fontSize: 10, textAlign: 'center', lineHeight: 15, marginTop: 10, maxWidth: 340 },
-  tabBar: { minHeight: 66, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-around', paddingTop: 7, paddingBottom: Platform.OS === 'ios' ? 12 : 5 },
+  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 1000, elevation: 30, minHeight: 66, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-around', paddingTop: 7, paddingBottom: Platform.OS === 'ios' ? 12 : 5 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   tabIconWrap: { width: 42, height: 31, borderRadius: 11, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   tabIconWrapActive: { backgroundColor: COLORS.pale },
