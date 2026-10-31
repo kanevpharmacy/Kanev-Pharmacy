@@ -1856,10 +1856,10 @@ export default function App() {
       </View>}
         {renderPage()}
         {footerConfig.enabled === false ? null : isDesktop ? (
-                  <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 12, borderTopLeftRadius: 22, borderTopRightRadius: 22 }]}>
+                  <View style={[styles.fullFooter, { backgroundColor: footerConfig.background_color || '#EAF6FC' }, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 12, borderTopLeftRadius: 22, borderTopRightRadius: 22 }]}>
                     <View style={[styles.footerTop, !isDesktop && { flexDirection: 'column', flexWrap: 'nowrap', alignItems: 'stretch', gap: 18, paddingBottom: 18 }]}>
-                      <View style={[styles.footerAbout, !isDesktop && { flex: 0, width: '100%', maxWidth: '100%', minWidth: 0, alignSelf: 'stretch', padding: 15, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#D8E9F0' }]}>
-                        <View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}<View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{footerConfig.tagline || loginBranding.tagline || 'Closer to Your Health'}</Text></View></View>
+                      <View style={[styles.footerAbout, !isDesktop && { flex: 0, width: '100%', maxWidth: '100%', minWidth: 0, alignSelf: 'stretch', padding: 15, backgroundColor: footerConfig.card_color || '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#D8E9F0' }]}>
+                        <View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}<View><Text style={styles.footerBrand}>{footerConfig.brand_title || loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{footerConfig.tagline || loginBranding.tagline || 'Closer to Your Health'}</Text></View></View>
                         <Text style={styles.footerAboutCopy}>{footerConfig.description}</Text>
                         <Text style={styles.footerSmall}>{footerConfig.disclaimer}</Text>
                       </View>
@@ -1869,7 +1869,7 @@ export default function App() {
                       </View>
                       <View style={[styles.footerColumn, !isDesktop && { flex: 0, width: '100%', minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 15, gap: 9, borderWidth: 1, borderColor: '#D8E9F0' }]}><Text style={[styles.footerColumnTitle,{color:footerConfig.heading_color}]}>{footerConfig.info_heading}</Text><View style={!isDesktop ? { flexDirection: 'column', alignItems: 'flex-start', gap: 8 } : styles.footerInfoGrid}>{(footerConfig.info_lines||[]).map((line,index)=><Text key={index} style={[styles.footerLink,{color:footerConfig.text_color}]}>{line}</Text>)}</View></View>
                     </View>
-                    <View style={[styles.footerBottom, !isDesktop && { flexDirection: 'column', flexWrap: 'nowrap', alignItems: 'flex-start', justifyContent: 'center', gap: 6, paddingVertical: 12 }]}><Text style={[styles.footerBottomText, !isDesktop && { fontSize: 9, lineHeight: 14 }]}>{String(footerConfig.copyright||'').replaceAll('{year}',String(new Date().getFullYear()))}</Text><Text style={[styles.footerBottomText, !isDesktop && styles.footerBottomTextMobile]}>Please use medicines responsibly and follow professional advice.</Text></View>
+                    <View style={[styles.footerBottom, !isDesktop && { flexDirection: 'column', flexWrap: 'nowrap', alignItems: 'flex-start', justifyContent: 'center', gap: 6, paddingVertical: 12 }]}><Text style={[styles.footerBottomText, !isDesktop && { fontSize: 9, lineHeight: 14 }]}>{String(footerConfig.copyright||'').replaceAll('{year}',String(new Date().getFullYear()))}</Text><Text style={[styles.footerBottomText, !isDesktop && styles.footerBottomTextMobile]}>{footerConfig.responsible}</Text></View>
                   </View>
         ) : (
                   <View style={{ marginTop: 24, marginHorizontal: -14, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 24, backgroundColor: footerConfig.background_color || '#EAF6FC', borderTopWidth: 1, borderTopColor: '#D8E9F0' }}>
@@ -1877,15 +1877,15 @@ export default function App() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                         {loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
-                          <Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text>
+                          <Text style={styles.footerBrand}>{footerConfig.brand_title || loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
+                          <Text style={styles.footerTagline}>{footerConfig.tagline || loginBranding.tagline || 'Closer to Your Health'}</Text>
                         </View>
                       </View>
                       <Text style={{ fontSize: 12, lineHeight: 19, color: footerConfig.text_color || '#526C7A', marginTop: 11 }}>{footerConfig.description}</Text>
                       <Text style={{ fontSize: 10, lineHeight: 16, color: footerConfig.text_color || '#718078', marginTop: 8 }}>{footerConfig.disclaimer}</Text>
                     </View>
                     <View style={{ width: '100%', flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-                      <View style={{ flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 13, borderWidth: 1, borderColor: '#D8E9F0' }}>
+                      <View style={{ flex: 1, minWidth: 0, backgroundColor: footerConfig.card_color || '#FFFFFF', borderRadius: 16, padding: 13, borderWidth: 1, borderColor: '#D8E9F0' }}>
                         <Text style={[styles.footerColumnTitle,{color:footerConfig.heading_color}]}>{footerConfig.shop_heading}</Text>
                         {(footerConfig.shop_links||[]).map(label => <Pressable key={label} onPress={() => openStoreShop(label)} style={{ minHeight: 30, justifyContent: 'center' }}><Text style={styles.footerLink}>{label}</Text></Pressable>)}
                       </View>
