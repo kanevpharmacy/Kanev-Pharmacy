@@ -186,6 +186,7 @@ function KanevOrderProgress({ status, fulfilment }) {
 export default function App() {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isDesktop = viewportWidth >= 1024;
+  const footerConfig = { ...{"enabled":true,"brand_title":"Kanev Pharmacy","tagline":"Closer to Your Health","description":"Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.","disclaimer":"Product availability and dispensing are subject to pharmacy confirmation.","shop_heading":"Shop","shop_links":["Medicines","Personal Care","Skincare","Baby Care","Wellness","Medical Supplies"],"customer_heading":"Customer service","customer_links":["My account","My cart","Browse products","Get help"],"info_heading":"Pharmacy information","info_lines":["Closer to Your Health","Zambia · Prices in ZMW","Delivery or collection","Prescription review available"],"copyright":"© {year} Kanev Pharmacy. All rights reserved.","responsible":"{footerConfig.responsible}","background_color":"#EAF6FC","card_color":"#FFFFFF","text_color":"#4D6D7D","heading_color":"#172B24"}, ...(loginBranding?.footer_content || {}) };
   const isTablet = viewportWidth >= 640 && viewportWidth < 1024;
   const [tab, setTab] = useState('Home');
   const [query, setQuery] = useState('');
@@ -1069,8 +1070,8 @@ export default function App() {
           {loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={[styles.headerLogoImage,!isDesktop&&{width:43,height:43,borderRadius:9}]} resizeMode="contain" /> : null}
         </View>
         <View style={{ minWidth: 0,flexShrink:1 }}>
-          <Text numberOfLines={1} style={[styles.brandName, { color: loginBranding.brand_title_color || COLORS.green, fontSize: Math.min(Number(loginBranding.brand_title_size) || 15, isDesktop?18:15), fontFamily: loginBranding.brand_title_font_family === 'System' ? undefined : loginBranding.brand_title_font_family }]}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
-          {isDesktop && <Text numberOfLines={1} style={[styles.tagline, { color: loginBranding.tagline_color || COLORS.blue, fontSize: Math.min(Number(loginBranding.tagline_size) || 10, 12), fontFamily: loginBranding.tagline_font_family === 'System' ? undefined : loginBranding.tagline_font_family }]}>{loginBranding.tagline || 'Closer to Your Health'}</Text>}
+          <Text numberOfLines={1} style={[styles.brandName, { color: loginBranding.brand_title_color || COLORS.green, fontSize: Math.min(Number(loginBranding.brand_title_size) || 15, isDesktop?18:15), fontFamily: loginBranding.brand_title_font_family === 'System' ? undefined : loginBranding.brand_title_font_family }]}>{footerConfig.brand_title || loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
+          {isDesktop && <Text numberOfLines={1} style={[styles.tagline, { color: loginBranding.tagline_color || COLORS.blue, fontSize: Math.min(Number(loginBranding.tagline_size) || 10, 12), fontFamily: loginBranding.tagline_font_family === 'System' ? undefined : loginBranding.tagline_font_family }]}>{footerConfig.tagline || loginBranding.tagline || 'Closer to Your Health'}</Text>}
         </View>
       </Pressable>
       {isDesktop ? (
@@ -1854,25 +1855,25 @@ export default function App() {
         </ScrollView>
       </View>}
         {renderPage()}
-        {isDesktop ? (
+        {footerConfig.enabled === false ? null : isDesktop ? (
                   <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 12, borderTopLeftRadius: 22, borderTopRightRadius: 22 }]}>
                     <View style={[styles.footerTop, !isDesktop && { flexDirection: 'column', flexWrap: 'nowrap', alignItems: 'stretch', gap: 18, paddingBottom: 18 }]}>
                       <View style={[styles.footerAbout, !isDesktop && { flex: 0, width: '100%', maxWidth: '100%', minWidth: 0, alignSelf: 'stretch', padding: 15, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#D8E9F0' }]}>
                         <View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}<View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text></View></View>
-                        <Text style={styles.footerAboutCopy}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text>
-                        <Text style={styles.footerSmall}>Product availability and dispensing are subject to pharmacy confirmation.</Text>
+                        <Text style={styles.footerAboutCopy}>{footerConfig.description}</Text>
+                        <Text style={styles.footerSmall}>{footerConfig.disclaimer}</Text>
                       </View>
                       <View style={[styles.footerLinksRow, !isDesktop && { flex: 0, width: '100%', minWidth: 0, flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }]}>
-                        <View style={[styles.footerColumn, !isDesktop && { flex: 1, width: '50%', minWidth: 0, maxWidth: '50%', gap: 8 }]}><Text style={styles.footerColumnTitle}>Shop</Text>{['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label=><Pressable key={label} onPress={()=>openStoreShop(label)} style={!isDesktop && styles.footerMobileLink}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
-                        <View style={[styles.footerColumn, !isDesktop && styles.footerColumnMobile]}><Text style={styles.footerColumnTitle}>Customer service</Text>{[['My account','Account'],['My cart','Cart'],['Browse products','Shop'],['Get help','Account']].map(([label,target])=><Pressable key={label} onPress={()=>{if(target==='Shop')openStoreShop('All');else if(target==='Account'&&!session?.user)requireCustomerLogin();else if(target==='Cart')openCustomerCart();else setTab(target);}} style={!isDesktop && styles.footerMobileLink}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
+                        <View style={[styles.footerColumn, !isDesktop && { flex: 1, width: '50%', minWidth: 0, maxWidth: '50%', gap: 8 }]}><Text style={[styles.footerColumnTitle,{color:footerConfig.heading_color}]}>{footerConfig.shop_heading}</Text>{(footerConfig.shop_links||[]).map(label=><Pressable key={label} onPress={()=>openStoreShop(label)} style={!isDesktop && styles.footerMobileLink}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
+                        <View style={[styles.footerColumn, !isDesktop && styles.footerColumnMobile]}><Text style={[styles.footerColumnTitle,{color:footerConfig.heading_color}]}>{footerConfig.customer_heading}</Text>{(footerConfig.customer_links||[]).map(label=><Pressable key={label} onPress={()=>{const key=String(label).toLowerCase();if(key.includes('cart'))openCustomerCart();else if(key.includes('browse'))openStoreShop('All');else if(!session?.user)requireCustomerLogin();else setTab('Account');}} style={!isDesktop && styles.footerMobileLink}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
                       </View>
-                      <View style={[styles.footerColumn, !isDesktop && { flex: 0, width: '100%', minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 15, gap: 9, borderWidth: 1, borderColor: '#D8E9F0' }]}><Text style={styles.footerColumnTitle}>Pharmacy information</Text><View style={!isDesktop ? { flexDirection: 'column', alignItems: 'flex-start', gap: 8 } : styles.footerInfoGrid}><Text style={styles.footerLink}>{loginBranding.tagline || 'Closer to Your Health'}</Text><Text style={styles.footerLink}>Zambia · Prices in ZMW</Text><Text style={styles.footerLink}>Delivery or collection</Text><Text style={styles.footerLink}>Prescription review available</Text></View></View>
+                      <View style={[styles.footerColumn, !isDesktop && { flex: 0, width: '100%', minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 15, gap: 9, borderWidth: 1, borderColor: '#D8E9F0' }]}><Text style={[styles.footerColumnTitle,{color:footerConfig.heading_color}]}>{footerConfig.info_heading}</Text><View style={!isDesktop ? { flexDirection: 'column', alignItems: 'flex-start', gap: 8 } : styles.footerInfoGrid}>{(footerConfig.info_lines||[]).map((line,index)=><Text key={index} style={[styles.footerLink,{color:footerConfig.text_color}]}>{line}</Text>)}</View></View>
                     </View>
-                    <View style={[styles.footerBottom, !isDesktop && { flexDirection: 'column', flexWrap: 'nowrap', alignItems: 'flex-start', justifyContent: 'center', gap: 6, paddingVertical: 12 }]}><Text style={[styles.footerBottomText, !isDesktop && { fontSize: 9, lineHeight: 14 }]}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text><Text style={[styles.footerBottomText, !isDesktop && styles.footerBottomTextMobile]}>Please use medicines responsibly and follow professional advice.</Text></View>
+                    <View style={[styles.footerBottom, !isDesktop && { flexDirection: 'column', flexWrap: 'nowrap', alignItems: 'flex-start', justifyContent: 'center', gap: 6, paddingVertical: 12 }]}><Text style={[styles.footerBottomText, !isDesktop && { fontSize: 9, lineHeight: 14 }]}>{String(footerConfig.copyright||'').replaceAll('{year}',String(new Date().getFullYear()))}</Text><Text style={[styles.footerBottomText, !isDesktop && styles.footerBottomTextMobile]}>Please use medicines responsibly and follow professional advice.</Text></View>
                   </View>
         ) : (
-                  <View style={{ marginTop: 24, marginHorizontal: -14, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 24, backgroundColor: '#EAF6FC', borderTopWidth: 1, borderTopColor: '#D8E9F0' }}>
-                    <View style={{ width: '100%', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 15, borderWidth: 1, borderColor: '#D8E9F0', marginBottom: 14 }}>
+                  <View style={{ marginTop: 24, marginHorizontal: -14, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 24, backgroundColor: footerConfig.background_color || '#EAF6FC', borderTopWidth: 1, borderTopColor: '#D8E9F0' }}>
+                    <View style={{ width: '100%', backgroundColor: footerConfig.card_color || '#FFFFFF', borderRadius: 16, padding: 15, borderWidth: 1, borderColor: '#D8E9F0', marginBottom: 14 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                         {loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}
                         <View style={{ flex: 1, minWidth: 0 }}>
@@ -1880,25 +1881,22 @@ export default function App() {
                           <Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text>
                         </View>
                       </View>
-                      <Text style={{ fontSize: 12, lineHeight: 19, color: '#526C7A', marginTop: 11 }}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text>
-                      <Text style={{ fontSize: 10, lineHeight: 16, color: '#718078', marginTop: 8 }}>Product availability and dispensing are subject to pharmacy confirmation.</Text>
+                      <Text style={{ fontSize: 12, lineHeight: 19, color: footerConfig.text_color || '#526C7A', marginTop: 11 }}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text>
+                      <Text style={{ fontSize: 10, lineHeight: 16, color: footerConfig.text_color || '#718078', marginTop: 8 }}>Product availability and dispensing are subject to pharmacy confirmation.</Text>
                     </View>
                     <View style={{ width: '100%', flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
                       <View style={{ flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 13, borderWidth: 1, borderColor: '#D8E9F0' }}>
-                        <Text style={styles.footerColumnTitle}>Shop</Text>
-                        {['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label => <Pressable key={label} onPress={() => openStoreShop(label)} style={{ minHeight: 30, justifyContent: 'center' }}><Text style={styles.footerLink}>{label}</Text></Pressable>)}
+                        <Text style={[styles.footerColumnTitle,{color:footerConfig.heading_color}]}>{footerConfig.shop_heading}</Text>
+                        {(footerConfig.shop_links||[]).map(label => <Pressable key={label} onPress={() => openStoreShop(label)} style={{ minHeight: 30, justifyContent: 'center' }}><Text style={styles.footerLink}>{label}</Text></Pressable>)}
                       </View>
                       <View style={{ flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 13, borderWidth: 1, borderColor: '#D8E9F0' }}>
-                        <Text style={styles.footerColumnTitle}>Customer service</Text>
-                        {['My account','My cart','Browse products','Get help'].map((label, index) => <Pressable key={label} onPress={() => { if (index === 2) openStoreShop('All'); else if (index === 1) openCustomerCart(); else if (!session?.user) requireCustomerLogin(); else setTab('Account'); }} style={{ minHeight: 30, justifyContent: 'center' }}><Text style={styles.footerLink}>{label}</Text></Pressable>)}
+                        <Text style={[styles.footerColumnTitle,{color:footerConfig.heading_color}]}>{footerConfig.customer_heading}</Text>
+                        {(footerConfig.customer_links||[]).map((label, index) => <Pressable key={label} onPress={() => { const key=String(label).toLowerCase(); if (key.includes('cart')) openCustomerCart(); else if (key.includes('browse')) openStoreShop('All'); else if (!session?.user) requireCustomerLogin(); else setTab('Account'); }} style={{ minHeight: 30, justifyContent: 'center' }}><Text style={styles.footerLink}>{label}</Text></Pressable>)}
                       </View>
                     </View>
                     <View style={{ width: '100%', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 15, borderWidth: 1, borderColor: '#D8E9F0', marginBottom: 14 }}>
-                      <Text style={styles.footerColumnTitle}>Pharmacy information</Text>
-                      <Text style={[styles.footerLink, { marginTop: 7 }]}>{loginBranding.tagline || 'Closer to Your Health'}</Text>
-                      <Text style={[styles.footerLink, { marginTop: 7 }]}>Zambia · Prices in ZMW</Text>
-                      <Text style={[styles.footerLink, { marginTop: 7 }]}>Delivery or collection</Text>
-                      <Text style={[styles.footerLink, { marginTop: 7 }]}>Prescription review available</Text>
+                      <Text style={[styles.footerColumnTitle,{color:footerConfig.heading_color}]}>{footerConfig.info_heading}</Text>
+                      {(footerConfig.info_lines||[]).map((line,index)=><Text key={index} style={[styles.footerLink,{marginTop:7,color:footerConfig.text_color}]}>{line}</Text>)}
                     </View>
                     <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#D5E7EF', paddingTop: 12, gap: 6 }}>
                       <Text style={{ fontSize: 10, lineHeight: 15, color: '#66808D' }}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text>
