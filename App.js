@@ -1617,7 +1617,10 @@ export default function App() {
                       <Text style={styles.accountRowTitle}>{healthDocumentNumber(doc)}</Text>
                       <Text style={styles.accountRowSub}>{new Date(doc.created_at).toLocaleString()}</Text>
                     </View>
-                    <View style={{paddingHorizontal:8,paddingVertical:5,borderRadius:7,backgroundColor:doc.status==='completed'?'#E0F2E8':'#EEF1EF'}}><Text style={{fontSize:10,fontWeight:'900',color:COLORS.green}}>{String(doc.status||'submitted').replaceAll('_',' ')}</Text></View>
+                    <View style={{alignItems:'flex-end',gap:5}}>
+                      <View style={{paddingHorizontal:8,paddingVertical:5,borderRadius:7,backgroundColor:doc.status==='completed'?'#E0F2E8':'#EEF1EF'}}><Text style={{fontSize:10,fontWeight:'900',color:COLORS.green}}>{String(doc.status||'submitted').replaceAll('_',' ')}</Text></View>
+                      {(healthDocMessages[doc.id]||[]).slice(-1)[0]?.sender_role==='admin'?<View style={{paddingHorizontal:9,paddingVertical:5,borderRadius:8,backgroundColor:'#FEE4E2',borderWidth:1,borderColor:'#FDA29B'}}><Text style={{fontSize:9,fontWeight:'900',color:'#B42318'}}>NEW REPLY</Text></View>:null}
+                    </View>
                     <Ionicons name={expanded?'chevron-up':'chevron-down'} size={17} color={COLORS.muted}/>
                   </Pressable>
                   {expanded ? <View style={{paddingBottom:12,gap:7}}>
