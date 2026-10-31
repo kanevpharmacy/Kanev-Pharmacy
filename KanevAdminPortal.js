@@ -126,7 +126,7 @@ function AppearancePicker({label,value,onChange,kind='color'}) {
 
 export default function KanevAdminPortal(){
  const {width}=useWindowDimensions(); const desktop=width>=980; const [session,setSession]=useState(null); const [role,setRole]=useState(''); const [checking,setChecking]=useState(true); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [busy,setBusy]=useState(false); const [page,setPage]=useState('Overview'); const [error,setError]=useState(''); const [documentPreview,setDocumentPreview]=useState(null); const [documentPreviewLoading,setDocumentPreviewLoading]=useState(false);
- const [stats,setStats]=useState({orders:0,pending:0,products:0,customers:0,revenue:0}); const [orders,setOrders]=useState([]); const [healthDocuments,setHealthDocuments]=useState([]); const [healthDocBusyId,setHealthDocBusyId]=useState(null);
+ const [stats,setStats]=useState({orders:0,pending:0,products:0,customers:0,revenue:0}); const [orders,setOrders]=useState([]); const [healthDocuments,setHealthDocuments]=useState([]); const [healthDocBusyId,setHealthDocBusyId]=useState(null); const healthDocumentsLoadingRef=useRef(false);
  const [expandedHealthDocumentId,setExpandedHealthDocumentId]=useState(null); const [healthDocFeedback,setHealthDocFeedback]=useState({}); const [healthDocMessages,setHealthDocMessages]=useState({}); const [healthDocSendingId,setHealthDocSendingId]=useState(null); const [healthDocFilter,setHealthDocFilter]=useState('all'); const [healthDocTypeFilter,setHealthDocTypeFilter]=useState('all'); const [expandedAdminOrderId,setExpandedAdminOrderId]=useState(null); const [expandedOrderId,setExpandedOrderId]=useState(null); const [orderItemsById,setOrderItemsById]=useState({}); const [orderItemsLoadingId,setOrderItemsLoadingId]=useState(null); const [products,setProducts]=useState([]); const [customers,setCustomers]=useState([]); const [categories,setCategories]=useState([]); const [loading,setLoading]=useState(false); const [search,setSearch]=useState('');
  const emptyProductForm={id:null,name:'',slug:'',summary:'',description:'',price_zmw:'',original_price_zmw:'',rating:'5.0',stock_quantity:'0',low_stock_threshold:'5',expiry_date:'',brand:'',sku:'',image_url:'',image_urls:[],category_id:'',category_ids:[],is_active:true,requires_prescription:false,scheduled_at:''};
  const [productForm,setProductForm]=useState(emptyProductForm);
@@ -140,7 +140,7 @@ export default function KanevAdminPortal(){
  const [imageOptimizationBusy,setImageOptimizationBusy]=useState(false); const [imageOptimizationProgress,setImageOptimizationProgress]=useState('');
  const [menuItems,setMenuItems]=useState([]); const [menuForm,setMenuForm]=useState({id:null,label:'',node_type:'menu',parent_id:'',sort_order:'0',is_active:true,destination_type:'category',destination_value:''});
  useEffect(()=>{let alive=true; (async()=>{if(!supabaseConfigured){if(alive){setChecking(false);setError('Administration services are not available right now. Check the app configuration or contact your system administrator.')}return;} const {data}=await supabase.auth.getSession(); if(alive&&data.session){setSession(data.session); await verifyAdmin(data.session,alive);} else if(alive)setChecking(false);})(); const {data:listener}=supabase.auth.onAuthStateChange((_e,next)=>{if(alive){setSession(next); if(!next){setRole('');setChecking(false);}}}); return ()=>{alive=false;listener?.subscription?.unsubscribe?.();};},[]);
- async function verifyAdmin(ses,alive=true){setChecking(true);setError(''); try {const {data,error:e}=await supabase.from('admin_members').select('role').eq('user_id',ses.user.id).maybeSingle(); if(e)throw e; if(!data){await supabase.auth.signOut();setError('This account is not registered as a Kanev Pharmacy administrator. Ask the owner to grant access.');setRole('');} else {setRole(data.role); await loadData(); await loadHealthDocuments(ses.user.id);}} catch(e){setError('We could not verify your administrator access. Please try again, and contact the system owner if the issue continues.');} finally{setChecking(false);} }
+ async function verifyAdmin(ses,alive=true){setChecking(true);setError(''); try {const {data,error:e}=await supabase.from('admin_members').select('role').eq('user_id',ses.user.id).maybeSingle(); if(e)throw e; if(!data){await supabase.auth.signOut();setError('This account is not registered as a Kanev Pharmacy administrator. Ask the owner to grant access.');setRole('');} else {setRole(data.role); await loadData();}} catch(e){setError('We could not verify your administrator access. Please try again, and contact the system owner if the issue continues.');} finally{setChecking(false);} }
  async function signIn(){setBusy(true);setError('');try{const {data,error:e}=await supabase.auth.signInWithPassword({email:email.trim(),password});if(e)throw e;if(data.session){setSession(data.session);await verifyAdmin(data.session);}}catch(e){setError('We could not sign you in with those details. Check your email and password, then try again.');}finally{setBusy(false);}}
  useEffect(()=>{
   if(!supabaseConfigured || !session?.user?.id || !role) return undefined;
@@ -282,14 +282,22 @@ export default function KanevAdminPortal(){
   }finally{setImageOptimizationBusy(false);}
  }
  async function loadHealthDocuments(userId=session?.user?.id){
-  if(!supabaseConfigured || !userId)return;
-  const {data,error:e}=await supabase.from('customer_health_documents').select('id,customer_id,document_type,title,notes,file_path,file_name,mime_type,file_size,status,admin_feedback,reviewed_by,reviewed_at,created_at,updated_at,conversation_closed_at').order('created_at',{ascending:false}).limit(200);
-  if(e){setError(`Health documents could not be loaded: ${e.message}`);return;}
-  const docs=data||[];setHealthDocuments(docs);
-  if(!docs.length){setHealthDocMessages({});return;}
-  const {data:messages,error:me}=await supabase.from('customer_health_document_messages').select('id,document_id,sender_id,sender_role,message,created_at,read_at,read_by').in('document_id',docs.map(d=>d.id)).order('created_at',{ascending:true});
-  if(!me){const grouped={};(messages||[]).forEach(m=>{(grouped[m.document_id] ||= []).push(m);});setHealthDocMessages(grouped);}
-  else setError(`Conversation messages could not be loaded: ${me.message}`);
+  if(!supabaseConfigured || !userId || healthDocumentsLoadingRef.current)return;
+  healthDocumentsLoadingRef.current=true;
+  try{
+   const {data,error:e}=await supabase.from('customer_health_documents')
+    .select('id,customer_id,document_type,title,notes,file_path,file_name,mime_type,file_size,status,admin_feedback,reviewed_by,reviewed_at,created_at,updated_at,conversation_closed_at')
+    .order('created_at',{ascending:false}).limit(100);
+   if(e){setError(`Health documents could not be loaded: ${e.message}`);return;}
+   const docs=data||[];setHealthDocuments(docs);
+   if(!docs.length){setHealthDocMessages({});return;}
+   const {data:messages,error:me}=await supabase.from('customer_health_document_messages')
+    .select('id,document_id,sender_id,sender_role,message,created_at,read_at,read_by')
+    .in('document_id',docs.map(d=>d.id)).order('created_at',{ascending:true}).limit(500);
+   if(!me){const grouped={};(messages||[]).forEach(m=>{(grouped[m.document_id] ||= []).push(m);});setHealthDocMessages(grouped);}
+   else setError(`Conversation messages could not be loaded: ${me.message}`);
+  }catch(err){setError(`Health documents could not be loaded: ${err?.message||'network error'}`);}
+  finally{healthDocumentsLoadingRef.current=false;}
  }
  async function markHealthDocumentRead(doc){
   if(!doc?.id||!session?.user?.id)return;
