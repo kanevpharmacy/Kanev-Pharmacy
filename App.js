@@ -2096,9 +2096,21 @@ const styles = StyleSheet.create({
   footerTop:{flexDirection:'row',flexWrap:'wrap',gap:30,paddingBottom:28},footerAbout:{flex:2,minWidth:220,maxWidth:370},footerLogoRow:{flexDirection:'row',alignItems:'center',gap:10},footerLogo:{width:39,height:39,borderRadius:12,backgroundColor:COLORS.green,alignItems:'center',justifyContent:'center'},footerAboutCopy:{fontSize:12,lineHeight:19,color:'#526C7A',marginTop:14,maxWidth:330},
   footerColumn:{flex:1,minWidth:145,gap:11},footerColumnTitle:{fontSize:13,fontWeight:'900',color:COLORS.ink,marginBottom:3},footerLink:{fontSize:11,lineHeight:17,color:'#4D6D7D'},footerBottom:{borderTopWidth:1,borderTopColor:'#D5E7EF',minHeight:55,flexDirection:'row',flexWrap:'wrap',alignItems:'center',justifyContent:'space-between',gap:8,paddingVertical:13},footerBottomText:{fontSize:10,color:'#66808D'},
   safe: { flex: 1, backgroundColor: COLORS.background },
-  // Keep the web app itself inside the viewport. The page content then scrolls
-  // inside ScrollView, while the bottom navigation stays anchored to this frame.
-  webAppViewport: { height: '100vh', maxHeight: '100vh', width: '100%', overflow: 'hidden', position: 'relative' },
+  // Lock the web app to the dynamic visible viewport. Only the inner ScrollView
+  // scrolls; the navigation is anchored to this viewport and cannot ride the page.
+  webAppViewport: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100dvh',
+    minHeight: 0,
+    maxHeight: '100dvh',
+    overflow: 'hidden',
+    zIndex: 0,
+  },
   header: { position: 'relative', zIndex: 1000, elevation: 30, minHeight: 76, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: COLORS.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   logoMark: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.green, alignItems: 'center', justifyContent: 'center', position: 'relative' },
@@ -2108,7 +2120,7 @@ const styles = StyleSheet.create({
   cartHeader: { width: 43, height: 43, borderRadius: 14, backgroundColor: COLORS.pale, alignItems: 'center', justifyContent: 'center' },
   cartDot: { position: 'absolute', top: -4, right: -3, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.lime, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   cartDotText: { color: COLORS.green, fontSize: 10, fontWeight: '900' },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, minHeight: 0, overscrollBehavior: 'contain' },
   pageContent: { paddingHorizontal: 18, paddingTop: 19, paddingBottom: 28, maxWidth: 1320, width: '100%', alignSelf: 'center' },
   pageContentDesktop: { paddingHorizontal: 32, paddingTop: 24, paddingBottom: 40, maxWidth: 1320 },
   pageContentTablet: { paddingHorizontal: 24, paddingTop: 20 },
