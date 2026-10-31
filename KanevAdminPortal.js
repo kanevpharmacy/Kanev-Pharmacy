@@ -597,9 +597,8 @@ setError(`${label} uploaded and saved. It will remain selected after refresh.`);
    setBannerImageBusy(true);
    const uploaded=[];
    for(let i=0;i<assets.length;i++){
-    const asset=assets[i], mime=asset.mimeType||'image/jpeg';
-    const ext=(asset.fileName?.split('.').pop()||mime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-    const response=await fetch(asset.uri);const blob=await response.blob();
+    const asset=assets[i];
+    const {blob,mime,ext}=await prepareOptimizedImage(asset,{maxDimension:1800,quality:0.78});
     const path=`${session.user.id}/${Date.now()}-${i}-${Math.random().toString(36).slice(2,7)}.${ext}`;
     const {error:uploadError}=await supabase.storage.from('store-banners').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
     if(uploadError)throw uploadError;
