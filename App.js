@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView, View, Text, TextInput, ScrollView, Pressable, Animated,
   Image as NativeImage, ImageBackground, StyleSheet, StatusBar, Platform, Modal, Linking, useWindowDimensions
@@ -233,6 +234,7 @@ export default function App() {
   const [accountSection, setAccountSection] = useState('profile');
   const [orderBusy, setOrderBusy] = useState(false);
   const [loginBranding, setLoginBranding] = useState(DEFAULT_LOGIN_BRANDING);
+  const [cachedStartupLogoUrl, setCachedStartupLogoUrl] = useState('');
   const [storeMenuItems, setStoreMenuItems] = useState([]);
   const [storeCategories, setStoreCategories] = useState([]);
   const [expandedMenuId, setExpandedMenuId] = useState([]);
@@ -457,6 +459,7 @@ export default function App() {
     if (!supabaseConfigured) { setAuthInitialized(true); return; }
 
     let active = true;
+    AsyncStorage.getItem('kanev_startup_logo_url').then(url => { if (active && url) setCachedStartupLogoUrl(url); }).catch(() => {});
     // Resolve the saved session and its admin role before rendering the storefront.
     // This prevents the customer home page flashing briefly when an admin refreshes.
     (async () => {
@@ -474,6 +477,11 @@ export default function App() {
         if (!active) return;
         if (!brandingError && brandingData) {
           setLoginBranding(current => ({ ...current, ...brandingData }));
+          if (brandingData.loading_logo_url) {
+            setCachedStartupLogoUrl(brandingData.loading_logo_url);
+            AsyncStorage.setItem('kanev_startup_logo_url', brandingData.loading_logo_url).catch(() => {});
+            NativeImage.prefetch(brandingData.loading_logo_url).catch(() => {});
+          }
         } else if (brandingError) {
           console.warn('[Kanev startup] Could not load startup branding:', brandingError.message);
         }
@@ -1664,9 +1672,7 @@ export default function App() {
       <SafeAreaView style={[styles.safe, { alignItems: 'center', justifyContent: 'center' }]}>
         <ExpoStatusBar style="dark" />
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        {loginBranding.loading_logo_url ? <Image loading="eager" source={{ uri: loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 112, height: 112, marginBottom: 12 }} /> : <View style={{ width: 112, height: 112, marginBottom: 12 }} /> }
-        <Text style={styles.brandName}>{loginBranding.pharmacy_title || "Kanev Pharmacy"}</Text>
-        <Text style={styles.tagline}>Preparing your secure workspace…</Text>
+        {(cachedStartupLogoUrl || loginBranding.loading_logo_url) ? <Image loading="eager" source={{ uri: cachedStartupLogoUrl || loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 132, height: 132 }} /> : null}
       </SafeAreaView>
     );
   }
