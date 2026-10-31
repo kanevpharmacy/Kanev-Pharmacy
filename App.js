@@ -1846,7 +1846,7 @@ export default function App() {
           {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
           {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
           {name:'Services',icon:'heart-outline',active:mobileServicesOpen,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
-          {name:'Account',icon:'person-outline',active:tab==='Account'&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
+          {name:'Account',icon:'person-outline',active:(tab==='Account'||tab==='Orders')&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
         ].map(item=>(
           <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
             <View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>
