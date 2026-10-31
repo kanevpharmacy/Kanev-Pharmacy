@@ -1480,7 +1480,7 @@ export default function App() {
                 <Text style={styles.price}>{money(o.total_zmw)}</Text>
               </View>;
             })}</> : accountSection==='prescriptions' ? <>
-              <View style={styles.myAccountSectionHeader}><View><Text style={styles.myAccountSectionTitle}>Prescriptions & lab results</Text><Text style={styles.myAccountSectionSub}>Upload documents securely and follow the pharmacy's review.</Text></View></View>
+              <View style={styles.myAccountSectionHeader}><View><Text style={styles.myAccountSectionTitle}>{activeDocType === 'lab_result' ? 'Lab Test Results' : activeDocType === 'prescription' ? 'Prescriptions' : 'Prescriptions & lab results'}</Text><Text style={styles.myAccountSectionSub}>{activeDocType === 'lab_result' ? 'Upload lab results and follow the pharmacy review.' : activeDocType === 'prescription' ? 'Upload prescriptions and follow the pharmacy review.' : 'Upload documents securely and follow the pharmacy\'s review.'}</Text></View></View>
               <View style={{padding:14,borderRadius:12,backgroundColor:'#F0F7F2',borderWidth:1,borderColor:COLORS.border,marginBottom:14}}>
                 <Text style={styles.myAccountQuickTitle}>Prepare your submission</Text>
                 <View style={{flexDirection:isDesktop?'row':'column',gap:14,marginTop:12,alignItems:'stretch'}}>
@@ -1489,7 +1489,7 @@ export default function App() {
                   </View>
                   <View style={{flex:isDesktop?1:undefined,gap:9,minWidth:0}}>
                     <Text style={styles.myAccountQuickTitle}>Document details</Text>
-                    <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{[['prescription','Prescription','document-text-outline'],['lab_result','Lab result','flask-outline']].map(([value,label,icon])=><Pressable key={value} onPress={()=>setHealthDocType(value)} style={{padding:10,borderRadius:9,borderWidth:1,borderColor:healthDocType===value?COLORS.green:COLORS.border,backgroundColor:healthDocType===value?'#E0F2E8':'#fff',flexDirection:'row',alignItems:'center',gap:7}}><Ionicons name={icon} size={17} color={COLORS.green}/><Text style={{fontSize:12,fontWeight:'800',color:COLORS.green}}>{label}</Text></Pressable>)}</View>
+                    {!activeDocType && <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{[['prescription','Prescription','document-text-outline'],['lab_result','Lab result','flask-outline']].map(([value,label,icon])=><Pressable key={value} onPress={()=>setHealthDocType(value)} style={{padding:10,borderRadius:9,borderWidth:1,borderColor:healthDocType===value?COLORS.green:COLORS.border,backgroundColor:healthDocType===value?'#E0F2E8':'#fff',flexDirection:'row',alignItems:'center',gap:7}}><Ionicons name={icon} size={17} color={COLORS.green}/><Text style={{fontSize:12,fontWeight:'800',color:COLORS.green}}>{label}</Text></Pressable>)}</View>}
                     <TextInput value={healthDocTitle} onChangeText={setHealthDocTitle} placeholder="Title (optional)" placeholderTextColor={COLORS.muted} style={styles.fieldInput} />
                     <TextInput value={healthDocNotes} onChangeText={setHealthDocNotes} placeholder="Note for the pharmacy (optional)" placeholderTextColor={COLORS.muted} multiline style={[styles.fieldInput,{minHeight:90,textAlignVertical:'top'}]} />
                     <Text style={{fontSize:11,color:COLORS.muted,lineHeight:16}}>PDF, JPG, PNG or WebP · Maximum 10 MB. Only you and authorized pharmacy staff can access the uploaded file.</Text>
@@ -1501,7 +1501,7 @@ export default function App() {
                 </View>
               </View>
               <View style={styles.myAccountSectionHeader}><View><Text style={styles.myAccountSectionTitle}>My submissions</Text><Text style={styles.myAccountSectionSub}>Feedback and status updates from Kanev Pharmacy</Text></View><Text style={styles.myAccountSectionSub}>Updates automatically</Text></View>
-              {healthDocuments.length===0?<View style={styles.myAccountEmpty}><View style={styles.myAccountEmptyIcon}><Ionicons name="document-text-outline" size={27} color={COLORS.green}/></View><Text style={styles.myAccountEmptyTitle}>No documents submitted</Text><Text style={styles.myAccountEmptyCopy}>Your uploaded prescriptions and lab results will appear here with review updates.</Text></View>:healthDocuments.map(doc=>{
+              {visibleHealthDocuments.length===0?<View style={styles.myAccountEmpty}><View style={styles.myAccountEmptyIcon}><Ionicons name="document-text-outline" size={27} color={COLORS.green}/></View><Text style={styles.myAccountEmptyTitle}>No documents submitted</Text><Text style={styles.myAccountEmptyCopy}>{activeDocType === 'lab_result' ? 'Your submitted lab results will appear here with review updates.' : activeDocType === 'prescription' ? 'Your submitted prescriptions will appear here with review updates.' : 'Your uploaded prescriptions and lab results will appear here with review updates.'}</Text></View>:visibleHealthDocuments.map(doc=>{
                 const messages=healthDocMessages[doc.id]||[], closed=!!doc.conversation_closed_at;
                 const expanded = expandedHealthDocumentId === doc.id;
                 return <View key={doc.id} style={[styles.myAccountOrderRow,{alignItems:'stretch',marginBottom:8,paddingVertical:0}]}>
@@ -1532,7 +1532,7 @@ export default function App() {
               </View>
               <View style={styles.myAccountSectionHeader}><View><Text style={styles.myAccountSectionTitle}>Quick Access</Text><Text style={styles.myAccountSectionSub}>Your pharmacy services in one place</Text></View><Text style={styles.myAccountSmallNote}>Manage your services</Text></View>
               <View style={styles.myAccountQuickGrid}>
-                {[['cube-outline','My Orders','View your online order requests',()=>{if(!isDesktop){setTab('Orders');return;}setAccountSection('orders');}],['document-text-outline','Prescriptions','Upload and track prescription review',()=>{setHealthDocType('prescription');setTab('HealthDocuments');}],['flask-outline','Lab Results','Upload results and receive feedback',()=>{setHealthDocType('lab_result');setTab('HealthDocuments');}],['cart-outline','My Cart','Continue shopping',()=>setTab('Cart')]].map(([icon,title,sub,action])=><Pressable key={title} style={styles.myAccountQuickCard} onPress={action}><View style={styles.myAccountQuickIcon}><Ionicons name={icon} size={22} color={COLORS.blue}/></View><View style={{flex:1,minWidth:0}}><Text style={styles.myAccountQuickTitle}>{title}</Text><Text style={styles.myAccountQuickSub}>{sub}</Text></View><Ionicons name="chevron-forward" size={18} color={COLORS.muted}/></Pressable>)}
+                {[['cube-outline','My Orders','View your online order requests',()=>{if(!isDesktop){setTab('Orders');return;}setAccountSection('orders');}],['document-text-outline','Prescriptions','Upload and track prescription review',()=>{setHealthDocType('prescription');setTab(isDesktop?'HealthDocuments':'Prescriptions');}],['flask-outline','Lab Results','Upload results and receive feedback',()=>{setHealthDocType('lab_result');setTab(isDesktop?'HealthDocuments':'LabResults');}],['cart-outline','My Cart','Continue shopping',()=>setTab('Cart')]].map(([icon,title,sub,action])=><Pressable key={title} style={styles.myAccountQuickCard} onPress={action}><View style={styles.myAccountQuickIcon}><Ionicons name={icon} size={22} color={COLORS.blue}/></View><View style={{flex:1,minWidth:0}}><Text style={styles.myAccountQuickTitle}>{title}</Text><Text style={styles.myAccountQuickSub}>{sub}</Text></View><Ionicons name="chevron-forward" size={18} color={COLORS.muted}/></Pressable>)}
               </View>
               <View style={styles.myAccountHelpBanner}><View style={styles.myAccountHelpIcon}><Ionicons name="chatbubbles-outline" size={22} color={COLORS.green}/></View><View style={{flex:1}}><Text style={styles.myAccountQuickTitle}>Need a hand?</Text><Text style={styles.myAccountQuickSub}>Our team can help with orders, product availability and prescription questions.</Text></View><Pressable onPress={()=>notify('Kanev Pharmacy support','Please contact the pharmacy team for assistance with your account or an order.')}><Text style={styles.myAccountTextLink}>Get help</Text></Pressable></View>
             </>}
@@ -1576,6 +1576,8 @@ export default function App() {
     </View>;
   };
   const HealthDocumentsPage = () => {
+    const activeDocType = !isDesktop && tab === 'LabResults' ? 'lab_result' : !isDesktop && tab === 'Prescriptions' ? 'prescription' : null;
+    const visibleHealthDocuments = activeDocType ? healthDocuments.filter(doc => doc.document_type === activeDocType) : healthDocuments;
     if (!session?.user) return <View style={styles.formCard}><Text style={styles.accountHeading}>Sign in required</Text><Text style={styles.accountCopy}>Sign in to securely upload and track prescriptions or lab results.</Text><ActionButton title="Sign in" onPress={() => { setAuthMode('signin'); setAuthModalVisible(true); setTab('Account'); }} /></View>;
     return <View style={{width:'100%',gap:12}}>
       <Pressable onPress={() => setTab('Home')} style={{flexDirection:'row',alignItems:'center',gap:7,alignSelf:'flex-start',paddingVertical:5}}><Ionicons name="arrow-back" size={18} color={COLORS.green}/><Text style={{fontSize:13,fontWeight:'800',color:COLORS.green}}>Back to home</Text></Pressable>
@@ -1693,6 +1695,8 @@ export default function App() {
       case 'Checkout': return Checkout();
       case 'Orders': return CustomerOrdersPage();
       case 'HealthDocuments': return HealthDocumentsPage();
+      case 'Prescriptions': return HealthDocumentsPage();
+      case 'LabResults': return HealthDocumentsPage();
       case 'Account': return Account({ compact: true });
       default: return Home();
     }
@@ -1862,8 +1866,8 @@ export default function App() {
           </View>
           <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
             {[
-              {title:'Upload prescription',sub:'Send for pharmacy review',icon:'document-text-outline',run:()=>{setHealthDocType('prescription');if(session?.user)setTab('HealthDocuments');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
-              {title:'Lab test results',sub:'Upload and view lab documents',icon:'flask-outline',run:()=>{setHealthDocType('lab_result');if(session?.user)setTab('HealthDocuments');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
+              {title:'Upload prescription',sub:'Send for pharmacy review',icon:'document-text-outline',run:()=>{setHealthDocType('prescription');if(session?.user)setTab(isDesktop?'HealthDocuments':'Prescriptions');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
+              {title:'Lab test results',sub:'Upload and view lab documents',icon:'flask-outline',run:()=>{setHealthDocType('lab_result');if(session?.user)setTab(isDesktop?'HealthDocuments':'LabResults');else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
               {title:'Delivery',sub:'Delivery information and tracking',icon:'car-outline',run:()=>{if(session?.user){if(!isDesktop){setTab('Orders');}else{setAccountSection('orders');setTab('Account');}}else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
               {title:'Health insurance',sub:'Insurance and co-pay support',icon:'shield-checkmark-outline',run:()=>notify('Health insurance','Contact Kanev Pharmacy to confirm accepted insurance providers and co-pay arrangements.')},
             ].map(item=><Pressable key={item.title} onPress={()=>{setMobileServicesOpen(false);setSelectedProduct(null);item.run();}} style={{width:'48%',flexGrow:1,minHeight:92,borderRadius:13,borderWidth:1,borderColor:'#E1EBE5',backgroundColor:'#FBFDFC',padding:11,gap:6}}>
