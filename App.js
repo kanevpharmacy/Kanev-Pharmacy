@@ -1672,7 +1672,8 @@ export default function App() {
       <SafeAreaView style={[styles.safe, { alignItems: 'center', justifyContent: 'center' }]}>
         <ExpoStatusBar style="dark" />
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        {(cachedStartupLogoUrl || loginBranding.loading_logo_url) ? <Image loading="eager" source={{ uri: cachedStartupLogoUrl || loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 132, height: 132 }} /> : null}
+        {(cachedStartupLogoUrl || loginBranding.loading_logo_url) ? <Image loading="eager" source={{ uri: cachedStartupLogoUrl || loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 132, height: 132 }} /> : <View style={{ width: 132, height: 132 }} />}
+        <Text style={styles.brandName}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
       </SafeAreaView>
     );
   }
