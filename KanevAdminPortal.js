@@ -9,6 +9,38 @@ import KanevNoticeModal from './src/components/KanevNoticeModal';
 
 const GREEN = '#064E3B', LIME = '#C8F36A', INK = '#172B24', MUTED = '#687A72', LINE = '#DCE8E1', BG = '#F4F8F5', BLUE = '#236DA8';
 const money = n => `K${Number(n || 0).toLocaleString('en-ZM',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+/** Resize and encode browser uploads as compact WebP before sending them to Storage. */
+async function prepareOptimizedImage(asset, { maxDimension = 1600, quality = 0.78 } = {}) {
+  const response = await fetch(asset.uri);
+  if (!response.ok) throw new Error(`Could not read the selected image (HTTP ${response.status}).`);
+  const original = await response.blob();
+  if (!original.size) throw new Error('The selected image is empty or could not be read.');
+  if (Platform.OS !== 'web' || typeof document === 'undefined') {
+    const mime = asset.mimeType || original.type || 'image/jpeg';
+    return { blob: original, mime, ext: mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg' };
+  }
+  let bitmap;
+  try {
+    if (typeof createImageBitmap === 'function') bitmap = await createImageBitmap(original);
+    else bitmap = await new Promise((resolve, reject) => {
+      const img = new window.Image(), url = URL.createObjectURL(original);
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('This image could not be decoded for compression.')); };
+      img.src = url;
+    });
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d', { alpha: true });
+    if (!context) throw new Error('Image compression is unavailable in this browser.');
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve, reject) => canvas.toBlob(result => result ? resolve(result) : reject(new Error('The browser could not compress this image.')), 'image/webp', quality));
+    const mime = blob.type || original.type || 'image/jpeg';
+    return { blob, mime, ext: mime === 'image/webp' ? 'webp' : mime === 'image/png' ? 'png' : 'jpg' };
+  } finally { bitmap?.close?.(); }
+}
 const healthDocumentNumber = (doc) => `${doc?.document_type === 'prescription' ? 'RX' : 'LAB'}-${doc?.created_at ? new Date(doc.created_at).toISOString().slice(0,10).replaceAll('-','') : 'DOC'}-${String(doc?.id || '').replace(/-/g,'').slice(0,6).toUpperCase() || 'NEW'}`;
 const menu = [
   ['Overview','grid-outline'], ['Banners','images-outline'], ['Login Branding','color-palette-outline'], ['Homepage Categories','layers-outline'], ['Orders','receipt-outline'], ['Products','medkit-outline'], ['Categories','albums-outline'], ['Menu Management','list-outline'],
@@ -227,11 +259,11 @@ export default function KanevAdminPortal(){
    setProductImageUploading(true);
    const uploaded=[];
    for(const asset of result.assets){
-    const mime=asset.mimeType||'image/jpeg';
-    const ext=(asset.fileName?.split('.').pop()||mime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-    if(!['jpg','jpeg','png','webp'].includes(ext))throw new Error('Choose JPG, PNG or WebP images only.');
+    const sourceMime=asset.mimeType||'image/jpeg';
+    const sourceExt=(asset.fileName?.split('.').pop()||sourceMime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    if(!['jpg','jpeg','png','webp'].includes(sourceExt))throw new Error('Choose JPG, PNG or WebP images only.');
     if(asset.fileSize&&asset.fileSize>5*1024*1024)throw new Error('Each product image must be smaller than 5 MB.');
-    const response=await fetch(asset.uri);const blob=await response.blob();
+    const {blob,mime,ext}=await prepareOptimizedImage(asset,{maxDimension:1400,quality:0.78});
     const path=`products/${session.user.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
     const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
     if(uploadError)throw uploadError;
@@ -250,12 +282,12 @@ export default function KanevAdminPortal(){
    if(permission?.granted===false){setError('Please allow access to your photos/files to choose a category image.');return;}
    const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[1,1],quality:0.78});
    if(result.canceled||!result.assets?.[0])return;
-   const asset=result.assets[0]; const mime=asset.mimeType||'image/jpeg';
-   const ext=(asset.fileName?.split('.').pop()||mime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-   if(!['jpg','jpeg','png','webp'].includes(ext)){setError('Choose a JPG, PNG or WebP image.');return;}
+   const asset=result.assets[0]; const sourceMime=asset.mimeType||'image/jpeg';
+   const sourceExt=(asset.fileName?.split('.').pop()||sourceMime.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+   if(!['jpg','jpeg','png','webp'].includes(sourceExt)){setError('Choose a JPG, PNG or WebP image.');return;}
    if(asset.fileSize&&asset.fileSize>5*1024*1024){setError('Choose an image smaller than 5 MB.');return;}
    setBusy(categoryId||true);
-   const response=await fetch(asset.uri); const blob=await response.blob();
+   const {blob,mime,ext}=await prepareOptimizedImage(asset,{maxDimension:700,quality:0.76});
    const owner=session?.user?.id||'admin';
    const path=`categories/${owner}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
    const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
@@ -540,7 +572,7 @@ export default function KanevAdminPortal(){
  async function deleteMenuItem(item){if(menuItems.some(m=>m.parent_id===item.id)){setError('Move or delete this item’s submenus first.');return;}try{const {error:e}=await supabase.from('store_menu_items').delete().eq('id',item.id);if(e)throw e;await loadData();if(menuForm.id===item.id)setMenuForm({id:null,label:'',node_type:'menu',parent_id:'',sort_order:'0',is_active:true,destination_type:'category',destination_value:''});setError('Menu item deleted.');}catch(e){setError(`Menu item could not be deleted: ${e.message||'please try again.'}`);}}
  function menuTreeRows(parentId=null,depth=0){return menuItems.filter(m=>(m.parent_id||null)===parentId).sort((a,b)=>Number(a.sort_order)-Number(b.sort_order)).flatMap(item=>[{...item,_depth:depth},...menuTreeRows(item.id,depth+1)]);}
  async function saveBranding(){setBrandingSaving(true);setError('');try{const payload={...branding,id:'default',updated_at:new Date().toISOString(),updated_by:session.user.id};const {error:e}=await supabase.from('app_login_branding').upsert(payload,{onConflict:'id'});if(e)throw e;homepageSelectionDirty.current=false;setError(page==='Homepage Categories'?'Homepage category selection saved. Refresh the storefront to see the selected sections.':'Login and registration branding saved. Refresh the storefront to see changes.');}catch(e){setError(`Your branding changes could not be saved: ${e?.message||'check your administrator permissions and database migration.'}`);}finally{setBrandingSaving(false);}}
- async function chooseBrandImage(field,label){try{setError('');const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();if(!permission.granted){setError('Allow photo-library access to choose a branding image.');return;}const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,quality:0.78});if(result.canceled||!result.assets?.[0])return;const asset=result.assets[0];const ext=(asset.fileName?.split('.').pop()||asset.mimeType?.split('/').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const mime=asset.mimeType||'image/jpeg';const path=`brand-assets/${session.user.id}/${field}-${Date.now()}.${ext}`;setBrandingSaving(true);const response=await fetch(asset.uri);if(!response.ok)throw new Error(`Could not read the selected image (HTTP ${response.status}).`);const blob=await response.blob();if(!blob.size)throw new Error('The selected image is empty or could not be read.');const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:true,contentType:mime,cacheControl:'31536000'});if(uploadError)throw uploadError;const {data}=supabase.storage.from('product-images').getPublicUrl(path);
+ async function chooseBrandImage(field,label){try{setError('');const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();if(!permission.granted){setError('Allow photo-library access to choose a branding image.');return;}const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,quality:0.78});if(result.canceled||!result.assets?.[0])return;const asset=result.assets[0];setBrandingSaving(true);const {blob,mime,ext}=await prepareOptimizedImage(asset,{maxDimension:900,quality:0.82});const path=`brand-assets/${session.user.id}/${field}-${Date.now()}.${ext}`;const {error:uploadError}=await supabase.storage.from('product-images').upload(path,blob,{upsert:true,contentType:mime,cacheControl:'31536000'});if(uploadError)throw uploadError;const {data}=supabase.storage.from('product-images').getPublicUrl(path);
 const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
 const nextBranding = { ...branding, [field]: publicUrl, id: 'default', updated_at: new Date().toISOString(), updated_by: session.user.id };
 // Persist the selected logo immediately so it survives refresh even if Save is overlooked.
