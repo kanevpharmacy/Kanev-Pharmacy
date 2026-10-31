@@ -186,7 +186,6 @@ function KanevOrderProgress({ status, fulfilment }) {
 export default function App() {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isDesktop = viewportWidth >= 1024;
-  const footerConfig = { ...{"enabled":true,"brand_title":"Kanev Pharmacy","tagline":"Closer to Your Health","description":"Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.","disclaimer":"Product availability and dispensing are subject to pharmacy confirmation.","shop_heading":"Shop","shop_links":["Medicines","Personal Care","Skincare","Baby Care","Wellness","Medical Supplies"],"customer_heading":"Customer service","customer_links":["My account","My cart","Browse products","Get help"],"info_heading":"Pharmacy information","info_lines":["Closer to Your Health","Zambia · Prices in ZMW","Delivery or collection","Prescription review available"],"copyright":"© {year} Kanev Pharmacy. All rights reserved.","responsible":"{footerConfig.responsible}","background_color":"#EAF6FC","card_color":"#FFFFFF","text_color":"#4D6D7D","heading_color":"#172B24"}, ...(loginBranding?.footer_content || {}) };
   const isTablet = viewportWidth >= 640 && viewportWidth < 1024;
   const [tab, setTab] = useState('Home');
   const [query, setQuery] = useState('');
@@ -242,6 +241,7 @@ export default function App() {
   const [accountSection, setAccountSection] = useState('profile');
   const [orderBusy, setOrderBusy] = useState(false);
   const [loginBranding, setLoginBranding] = useState(DEFAULT_LOGIN_BRANDING);
+  const footerConfig = { ...{"enabled":true,"brand_title":"Kanev Pharmacy","tagline":"Closer to Your Health","description":"Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.","disclaimer":"Product availability and dispensing are subject to pharmacy confirmation.","shop_heading":"Shop","shop_links":["Medicines","Personal Care","Skincare","Baby Care","Wellness","Medical Supplies"],"customer_heading":"Customer service","customer_links":["My account","My cart","Browse products","Get help"],"info_heading":"Pharmacy information","info_lines":["Closer to Your Health","Zambia · Prices in ZMW","Delivery or collection","Prescription review available"],"copyright":"© {year} Kanev Pharmacy. All rights reserved.","responsible":"Please use medicines responsibly and follow professional advice.","background_color":"#EAF6FC","card_color":"#FFFFFF","text_color":"#4D6D7D","heading_color":"#172B24"}, ...(loginBranding?.footer_content || {}) };
   const [cachedStartupLogoUrl, setCachedStartupLogoUrl] = useState('');
   const [storeMenuItems, setStoreMenuItems] = useState([]);
   const [storeCategories, setStoreCategories] = useState([]);
