@@ -1730,7 +1730,7 @@ export default function App() {
         <ExpoStatusBar style="dark" />
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
         {(loginBranding.loading_logo_url || loginBranding.header_logo_url || cachedStartupLogoUrl) ? <Image loading="eager" source={{ uri: loginBranding.loading_logo_url || loginBranding.header_logo_url || cachedStartupLogoUrl }} resizeMode="contain" style={{ width: 132, height: 132 }} /> : null}
-        <Text style={styles.brandName}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
+        <Text style={styles.brandName}>{footerConfig.brand_title || loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
       </AppSafeAreaView>
     );
   }
@@ -1859,7 +1859,7 @@ export default function App() {
                   <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 12, borderTopLeftRadius: 22, borderTopRightRadius: 22 }]}>
                     <View style={[styles.footerTop, !isDesktop && { flexDirection: 'column', flexWrap: 'nowrap', alignItems: 'stretch', gap: 18, paddingBottom: 18 }]}>
                       <View style={[styles.footerAbout, !isDesktop && { flex: 0, width: '100%', maxWidth: '100%', minWidth: 0, alignSelf: 'stretch', padding: 15, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#D8E9F0' }]}>
-                        <View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}<View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text></View></View>
+                        <View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}<View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{footerConfig.tagline || loginBranding.tagline || 'Closer to Your Health'}</Text></View></View>
                         <Text style={styles.footerAboutCopy}>{footerConfig.description}</Text>
                         <Text style={styles.footerSmall}>{footerConfig.disclaimer}</Text>
                       </View>
@@ -1881,8 +1881,8 @@ export default function App() {
                           <Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text>
                         </View>
                       </View>
-                      <Text style={{ fontSize: 12, lineHeight: 19, color: footerConfig.text_color || '#526C7A', marginTop: 11 }}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text>
-                      <Text style={{ fontSize: 10, lineHeight: 16, color: footerConfig.text_color || '#718078', marginTop: 8 }}>Product availability and dispensing are subject to pharmacy confirmation.</Text>
+                      <Text style={{ fontSize: 12, lineHeight: 19, color: footerConfig.text_color || '#526C7A', marginTop: 11 }}>{footerConfig.description}</Text>
+                      <Text style={{ fontSize: 10, lineHeight: 16, color: footerConfig.text_color || '#718078', marginTop: 8 }}>{footerConfig.disclaimer}</Text>
                     </View>
                     <View style={{ width: '100%', flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
                       <View style={{ flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 13, borderWidth: 1, borderColor: '#D8E9F0' }}>
@@ -1899,8 +1899,8 @@ export default function App() {
                       {(footerConfig.info_lines||[]).map((line,index)=><Text key={index} style={[styles.footerLink,{marginTop:7,color:footerConfig.text_color}]}>{line}</Text>)}
                     </View>
                     <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#D5E7EF', paddingTop: 12, gap: 6 }}>
-                      <Text style={{ fontSize: 10, lineHeight: 15, color: '#66808D' }}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text>
-                      <Text style={{ fontSize: 10, lineHeight: 15, color: '#66808D' }}>Please use medicines responsibly and follow professional advice.</Text>
+                      <Text style={{ fontSize: 10, lineHeight: 15, color: footerConfig.text_color || '#66808D' }}>{String(footerConfig.copyright||'').replaceAll('{year}',String(new Date().getFullYear()))}</Text>
+                      <Text style={{ fontSize: 10, lineHeight: 15, color: footerConfig.text_color || '#66808D' }}>{footerConfig.responsible}</Text>
                     </View>
                   </View>
         )}
@@ -2133,7 +2133,7 @@ const styles = StyleSheet.create({
   desktopSearchInput:{flex:1,minWidth:0,fontSize:12,color:COLORS.ink,outlineStyle:'none'},rotatingPlaceholderClip:{position:'absolute',left:40,right:100,top:15,height:18,overflow:'hidden',flexDirection:'row',alignItems:'center'},rotatingPlaceholderClipMobile:{position:'absolute',left:40,right:100,top:14,height:18,overflow:'hidden',flexDirection:'row',alignItems:'center'},rotatingProductClip:{height:18,overflow:'hidden',justifyContent:'center',flex:1,minWidth:0},rotatingPlaceholderText:{fontSize:12,color:'#7C8A84'},desktopSearchButton:{height:39,paddingHorizontal:18,borderRadius:22,backgroundColor:COLORS.blue,alignItems:'center',justifyContent:'center'},desktopSearchButtonText:{fontSize:12,color:'#FFFFFF',fontWeight:'900'},
   desktopHeaderLink:{flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:4},desktopHeaderLinkText:{fontSize:12,color:COLORS.blue,fontWeight:'700'},desktopCart:{flexDirection:'row',alignItems:'center',gap:5,paddingLeft:2},
   tmSearchInput:{flex:1,minWidth:0,fontSize:12,color:COLORS.ink,outlineStyle:'none',paddingVertical:7},
-  fullFooter:{marginTop:28,backgroundColor:'#EAF6FC',marginHorizontal:-32,paddingHorizontal:32,paddingTop:32,paddingBottom:0,borderTopWidth:1,borderTopColor:'#D8E9F0'},
+  fullFooter:{marginTop:28,backgroundColor:footerConfig.background_color||'#EAF6FC',marginHorizontal:-32,paddingHorizontal:32,paddingTop:32,paddingBottom:0,borderTopWidth:1,borderTopColor:'#D8E9F0'},
   fullFooterMobile:{marginHorizontal:-14,paddingHorizontal:16,paddingTop:24,paddingBottom:12,borderTopLeftRadius:22,borderTopRightRadius:22},
   footerTopMobile:{flexDirection:'column',alignItems:'stretch',gap:20,paddingBottom:18},
   footerLinksRow:{flex:2,minWidth:290,flexDirection:'row',gap:24},
