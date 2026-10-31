@@ -392,27 +392,24 @@ export default function App() {
       const productColumns = 'id,name,slug,description,summary,brand,image_url,price_zmw,original_price_zmw,rating,stock_quantity,requires_prescription,is_active,is_featured,category_id,menu_subcategory_id';
       // The image gallery migration may not have been applied yet. Keep the
       // public catalogue working with the legacy primary image until it is.
-      let productQuery = await supabase.from('products')
-        .select(productColumns + ',image_urls')
-        .eq('is_active', true)
-        .order('is_featured', { ascending: false })
-        .order('name');
-      if (productQuery.error && /image_urls|column .* does not exist|42703/i.test([productQuery.error.message,productQuery.error.details,productQuery.error.code].join(' '))) {
-        console.warn('[Kanev catalogue] image_urls migration is pending; loading primary product images.');
-        productQuery = await supabase.from('products')
-          .select(productColumns)
-          .eq('is_active', true)
-          .order('is_featured', { ascending: false })
-          .order('name');
-      }
-      const { data, error } = productQuery;
-      if (error) throw error;
-
-      const [categoryResult, linkResult, menuResult] = await Promise.all([
+      // Start the product and lookup requests together. Previously the product
+      // request completed before the category/menu requests even began, adding
+      // an avoidable network round trip to every cold storefront load.
+      const [initialProductResult, categoryResult, linkResult, menuResult] = await Promise.all([
+        supabase.from('products').select(productColumns + ',image_urls')
+          .eq('is_active', true).order('is_featured', { ascending: false }).order('name'),
         supabase.from('categories').select('id,name').eq('is_active', true),
         supabase.from('product_categories').select('product_id,category_id'),
         supabase.from('store_menu_items').select('id,label')
       ]);
+      let productQuery = initialProductResult;
+      if (productQuery.error && /image_urls|column .* does not exist|42703/i.test([productQuery.error.message,productQuery.error.details,productQuery.error.code].join(' '))) {
+        console.warn('[Kanev catalogue] image_urls migration is pending; loading primary product images.');
+        productQuery = await supabase.from('products').select(productColumns)
+          .eq('is_active', true).order('is_featured', { ascending: false }).order('name');
+      }
+      const { data, error } = productQuery;
+      if (error) throw error;
       const categoryNamesById = Object.fromEntries((categoryResult.data || []).map(row => [row.id, row.name]));
       const subcategoryNamesById = Object.fromEntries((menuResult.data || []).map(row => [row.id, row.label]));
       const assignmentsByProduct = {};
@@ -464,28 +461,25 @@ export default function App() {
     // This prevents the customer home page flashing briefly when an admin refreshes.
     (async () => {
       try {
-        // Fetch branding alongside session restoration so the configured startup
-        // logo is ready before the existing startup screen is rendered.
-        // Restore the session and fetch branding concurrently so neither network
-        // request adds its full latency after the other. The startup logo itself is
-        // rendered eagerly below and benefits from the browser/device image cache.
-        const [sessionResult, brandingResult] = await Promise.all([
-          supabase.auth.getSession(),
-          supabase.from('app_login_branding').select('*').eq('id', 'default').maybeSingle()
-        ]);
-        const { data: brandingData, error: brandingError } = brandingResult;
-        if (!active) return;
-        if (!brandingError && brandingData) {
-          setLoginBranding(current => ({ ...current, ...brandingData }));
-          if (brandingData.loading_logo_url) {
-            setCachedStartupLogoUrl(brandingData.loading_logo_url);
-            AsyncStorage.setItem('kanev_startup_logo_url', brandingData.loading_logo_url).catch(() => {});
-            NativeImage.prefetch(brandingData.loading_logo_url).catch(() => {});
-          }
-        } else if (brandingError) {
-          console.warn('[Kanev startup] Could not load startup branding:', brandingError.message);
-        }
-        const { data, error } = sessionResult;
+        // Session restoration is the only network result required before we
+        // decide whether to show the storefront or the protected admin portal.
+        // Branding loads independently so a slow branding row cannot hold the
+        // entire application behind the startup screen.
+        const brandingRequest = supabase.from('app_login_branding').select('*').eq('id', 'default').maybeSingle()
+          .then(({ data: brandingData, error: brandingError }) => {
+            if (!active) return;
+            if (!brandingError && brandingData) {
+              setLoginBranding(current => ({ ...current, ...brandingData }));
+              if (brandingData.loading_logo_url) {
+                setCachedStartupLogoUrl(brandingData.loading_logo_url);
+                AsyncStorage.setItem('kanev_startup_logo_url', brandingData.loading_logo_url).catch(() => {});
+                NativeImage.prefetch(brandingData.loading_logo_url).catch(() => {});
+              }
+            } else if (brandingError) {
+              console.warn('[Kanev startup] Could not load startup branding:', brandingError.message);
+            }
+          }).catch(error => console.warn('[Kanev startup] Branding request failed:', error?.message || error));
+        const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         const initialSession = data.session || null;
         if (!active) return;
