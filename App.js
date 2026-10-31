@@ -1036,7 +1036,7 @@ export default function App() {
       <Pressable style={[styles.brandRow, !isDesktop && {flex:1,minWidth:0,gap:9}]} onPress={() => { setTab('Home'); setSelectedProduct(null); }} accessibilityRole="button" accessibilityLabel="Kanev Pharmacy home">
         <View style={[styles.headerLogoHolder,!isDesktop&&{width:43,height:43}]}>
           {loginBranding.header_logo_url ? <Image source={{ uri: optimizedImageUrl(loginBranding.header_logo_url, 180, 60) }} style={[styles.headerLogoImage,!isDesktop&&{width:43,height:43,borderRadius:9}]} resizeMode="contain" /> : <>
-            <View style={[styles.logoMark,!isDesktop&&{width:39,height:39,borderRadius:12}]}><Ionicons name="leaf" size={21} color="#FFFFFF" /><View style={styles.logoPlus}><Ionicons name="add" size={13} color={COLORS.green} /></View></View>
+            <View style={[styles.logoMark,!isDesktop&&{width:39,height:39,borderRadius:12}]}><Ionicons name="medical-outline" size={22} color="#FFFFFF" /></View>
           </>}
         </View>
         <View style={{ minWidth: 0,flexShrink:1 }}>
@@ -1658,7 +1658,7 @@ export default function App() {
       <SafeAreaView style={[styles.safe, { alignItems: 'center', justifyContent: 'center' }]}>
         <ExpoStatusBar style="dark" />
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        {loginBranding.loading_logo_url ? <Image source={{ uri: loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 112, height: 112, marginBottom: 12 }} /> : <View style={styles.logoMark}><Ionicons name="leaf" size={21} color="#FFFFFF" /></View>}
+        {loginBranding.loading_logo_url ? <Image source={{ uri: loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 112, height: 112, marginBottom: 12 }} /> : <View style={{ width: 112, height: 112, marginBottom: 12 }} /> }
         <Text style={styles.brandName}>{loginBranding.pharmacy_title || "Kanev Pharmacy"}</Text>
         <Text style={styles.tagline}>Preparing your secure workspace…</Text>
       </SafeAreaView>
@@ -1787,7 +1787,7 @@ export default function App() {
         {renderPage()}
         <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16 }]} >
           <View style={styles.footerTop}>
-            <View style={styles.footerAbout}><View style={styles.footerLogoRow}><View style={styles.footerLogo}><Ionicons name="leaf" size={19} color="#FFFFFF" /></View><View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text></View></View><Text style={styles.footerAboutCopy}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text><Text style={styles.footerSmall}>Product availability and dispensing are subject to pharmacy confirmation.</Text></View>
+            <View style={styles.footerAbout}><View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : <View style={styles.footerLogo}><Ionicons name="medical-outline" size={20} color="#FFFFFF" /></View>}<View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text></View></View><Text style={styles.footerAboutCopy}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text><Text style={styles.footerSmall}>Product availability and dispensing are subject to pharmacy confirmation.</Text></View>
             <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Shop</Text>{['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label=><Pressable key={label} onPress={()=>openStoreShop(label)}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
             <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Customer service</Text>{[['My account','Account'],['My cart','Cart'],['Browse products','Shop'],['Get help','Account']].map(([label,target])=><Pressable key={label} onPress={()=>{if(target==='Shop')openStoreShop('All');else if(target==='Account'&&!session?.user)requireCustomerLogin();else if(target==='Cart')openCustomerCart();else setTab(target);}}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
             <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Pharmacy information</Text><Text style={styles.footerLink}>{loginBranding.tagline || 'Closer to Your Health'}</Text><Text style={styles.footerLink}>Zambia · Prices in ZMW</Text><Text style={styles.footerLink}>Delivery or collection</Text><Text style={styles.footerLink}>Prescription review available</Text></View>
