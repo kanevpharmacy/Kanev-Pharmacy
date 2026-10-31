@@ -499,6 +499,8 @@ export default function App() {
         } else {
           setTab('Home');
         }
+        // Keep the startup view visible until saved logo/title branding is loaded.
+        await brandingRequest;
       } catch (_) {
         if (active) setTab('Home');
       } finally {
