@@ -185,6 +185,37 @@ function KanevOrderProgress({ status, fulfilment }) {
 }
 
 export default function App() {
+  // Mobile browsers can move their address/tool bars independently of the layout
+  // viewport. Keep the bottom navigation aligned to the *visible* viewport.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+    const updateVisibleViewportPosition = () => {
+      const bar = document.getElementById('kanev-mobile-bottom-navigation');
+      if (!bar) return;
+      const visual = window.visualViewport;
+      if (!visual) {
+        bar.style.bottom = '0px';
+        return;
+      }
+      const visibleBottom = visual.offsetTop + visual.height;
+      const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
+      const bottomGap = Math.max(0, layoutHeight - visibleBottom);
+      bar.style.bottom = `${bottomGap}px`;
+    };
+    updateVisibleViewportPosition();
+    const visual = window.visualViewport;
+    window.addEventListener('resize', updateVisibleViewportPosition, { passive: true });
+    window.addEventListener('orientationchange', updateVisibleViewportPosition, { passive: true });
+    visual?.addEventListener('resize', updateVisibleViewportPosition, { passive: true });
+    visual?.addEventListener('scroll', updateVisibleViewportPosition, { passive: true });
+    return () => {
+      window.removeEventListener('resize', updateVisibleViewportPosition);
+      window.removeEventListener('orientationchange', updateVisibleViewportPosition);
+      visual?.removeEventListener('resize', updateVisibleViewportPosition);
+      visual?.removeEventListener('scroll', updateVisibleViewportPosition);
+    };
+  }, []);
+
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isDesktop = viewportWidth >= 1024;
   const isTablet = viewportWidth >= 640 && viewportWidth < 1024;
