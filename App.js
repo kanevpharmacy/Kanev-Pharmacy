@@ -463,14 +463,16 @@ export default function App() {
       try {
         // Fetch branding alongside session restoration so the configured startup
         // logo is ready before the existing startup screen is rendered.
-        const brandingPromise = supabase.from('app_login_branding').select('*').eq('id', 'default').maybeSingle()
-          .then(({ data: brandingData }) => brandingData || null)
-          .catch(() => null);
+        const { data: brandingData, error: brandingError } = await supabase
+          .from('app_login_branding').select('loading_logo_url,pharmacy_title,tagline').eq('id', 'default').maybeSingle();
+        if (!active) return;
+        if (!brandingError && brandingData) {
+          setLoginBranding(current => ({ ...current, ...brandingData }));
+        } else if (brandingError) {
+          console.warn('[Kanev startup] Could not load startup branding:', brandingError.message);
+        }
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
-        const brandingData = await brandingPromise;
-        if (!active) return;
-        if (brandingData) setLoginBranding({ ...DEFAULT_LOGIN_BRANDING, ...brandingData });
         const initialSession = data.session || null;
         if (!active) return;
         setSession(initialSession);
