@@ -99,7 +99,7 @@ function ActionButton({ title, onPress, secondary = false, disabled = false }) {
   );
 }
 
-function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 145, imageResizeMode = 'contain', mobile = false }) {
+function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 145, imageResizeMode = 'contain', mobile = false, imageLoading = 'lazy' }) {
   const originalPrice = Number(product.original_price || product.original_price_zmw || 0);
   const sellingPrice = Number(product.price || product.price_zmw || 0);
   const discount = originalPrice > sellingPrice && originalPrice > 0
@@ -112,7 +112,7 @@ function ProductCard({ product, onAdd, onOpen, cardWidth = '19%', imageHeight = 
     <View style={[styles.productCard,{width:cardWidth,flexBasis:cardWidth,maxWidth:cardWidth},mobile && {padding:10,borderRadius:18,marginBottom:2}]}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`View ${product.name}`}>
         <View style={[styles.productImage, { backgroundColor: '#F6F9F7', height: imageHeight },mobile && {height:imageHeight,borderRadius:13,marginBottom:9}]}>
-          {product.image_url ? <Image source={{ uri: product.image_url }} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode={imageResizeMode} /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
+          {product.image_url ? <Image loading={imageLoading} source={{ uri: product.image_url }} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode={imageResizeMode} /> : <Ionicons name={product.icon || 'medical-outline'} size={38} color={COLORS.green} />}
           {hasRating ? <View style={styles.ratingBadge}><Ionicons name="star" size={10} color="#FFFFFF"/><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View> : null}
           {discount > 0 ? <View style={styles.discountBadge}><Text style={styles.discountBadgeText}>{discount}% off</Text></View> : null}
         </View>
@@ -1139,7 +1139,7 @@ export default function App() {
             const icon = CATEGORIES.find(c=>c.name.toLowerCase()===String(item.name).toLowerCase())?.icon || 'medkit-outline';
             return <Pressable key={item.id || item.name} style={styles.roundCategoryItem} onPress={()=>openStoreShop(item.name)} accessibilityRole="button" accessibilityLabel={`Shop ${item.name}`}>
               <View style={styles.roundCategoryImageWrap}>
-                {image ? <Image source={{uri:optimizedImageUrl(image, 240, 72, 'cover')}} style={styles.roundCategoryImage} resizeMode="cover" /> : <View style={[styles.roundCategoryFallback,{backgroundColor:['#E4F1CF','#E9DDF8','#F7DDF2','#DDEBFA','#FCE6DD','#E5F2E9'][i%6]}]}><Ionicons name={icon} size={37} color={COLORS.green}/></View>}
+                {image ? <Image loading={i < 8 ? 'eager' : 'lazy'} source={{uri:optimizedImageUrl(image, 240, 72, 'cover')}} style={styles.roundCategoryImage} resizeMode="cover" /> : <View style={[styles.roundCategoryFallback,{backgroundColor:['#E4F1CF','#E9DDF8','#F7DDF2','#DDEBFA','#FCE6DD','#E5F2E9'][i%6]}]}><Ionicons name={icon} size={37} color={COLORS.green}/></View>}
               </View>
               <Text style={styles.roundCategoryLabel} numberOfLines={2}>{item.name}</Text>
             </Pressable>;
@@ -1150,7 +1150,7 @@ export default function App() {
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Popular items</Text><Text style={styles.homeSectionSub}>Browse available pharmacy products</Text></View><Pressable onPress={() => openStoreShop('All')}><Text style={styles.link}>View all  →</Text></Pressable></View>
       {catalogueLoading ? <View style={styles.homeLoading}><Text style={styles.smallNote}>Loading live products…</Text></View> : null}
       {!catalogueLoading && !products.length && catalogueSource !== 'error' ? <View style={styles.homeLoading}><Ionicons name="basket-outline" size={30} color={COLORS.muted}/><Text style={styles.supportTitle}>No products published yet</Text><Text style={styles.supportText}>The pharmacy catalogue will appear here when products are available.</Text></View> : null}
-      <View style={styles.productGrid}>{products.slice(0,10).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} imageResizeMode="cover" onAdd={addToCart} onOpen={() => openStoreProduct(p)}/>)}</View>
+      <View style={styles.productGrid}>{products.slice(0,10).map((p,index) => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} imageResizeMode="cover" imageLoading={index < (isDesktop ? 5 : 4) ? 'eager' : 'lazy'} onAdd={addToCart} onOpen={() => openStoreProduct(p)}/>)}</View>
       {products.length > 10 ? <><View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>More to explore</Text><Text style={styles.homeSectionSub}>Healthcare and personal care favourites</Text></View></View><View style={styles.productGrid}>{products.slice(10,20).map(p => <ProductCard key={p.id} product={p} cardWidth={isDesktop?'19%':isTablet?'32%':'48%'} onAdd={addToCart} onOpen={() => openStoreProduct(p)}/>)}</View></> : null}
       {!catalogueLoading && catalogueSource === 'error' ? <View style={styles.homeLoading}><Text style={styles.supportTitle}>Catalogue unavailable</Text><ActionButton title="Retry" secondary onPress={loadCatalogue}/></View> : null}
       <View style={styles.marketPanel}>
