@@ -463,15 +463,21 @@ export default function App() {
       try {
         // Fetch branding alongside session restoration so the configured startup
         // logo is ready before the existing startup screen is rendered.
-        const { data: brandingData, error: brandingError } = await supabase
-          .from('app_login_branding').select('*').eq('id', 'default').maybeSingle();
+        // Restore the session and fetch branding concurrently so neither network
+        // request adds its full latency after the other. The startup logo itself is
+        // rendered eagerly below and benefits from the browser/device image cache.
+        const [sessionResult, brandingResult] = await Promise.all([
+          supabase.auth.getSession(),
+          supabase.from('app_login_branding').select('*').eq('id', 'default').maybeSingle()
+        ]);
+        const { data: brandingData, error: brandingError } = brandingResult;
         if (!active) return;
         if (!brandingError && brandingData) {
           setLoginBranding(current => ({ ...current, ...brandingData }));
         } else if (brandingError) {
           console.warn('[Kanev startup] Could not load startup branding:', brandingError.message);
         }
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = sessionResult;
         if (error) throw error;
         const initialSession = data.session || null;
         if (!active) return;
@@ -1658,7 +1664,7 @@ export default function App() {
       <SafeAreaView style={[styles.safe, { alignItems: 'center', justifyContent: 'center' }]}>
         <ExpoStatusBar style="dark" />
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        {loginBranding.loading_logo_url ? <Image source={{ uri: loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 112, height: 112, marginBottom: 12 }} /> : <View style={{ width: 112, height: 112, marginBottom: 12 }} /> }
+        {loginBranding.loading_logo_url ? <Image loading="eager" source={{ uri: loginBranding.loading_logo_url }} resizeMode="contain" style={{ width: 112, height: 112, marginBottom: 12 }} /> : <View style={{ width: 112, height: 112, marginBottom: 12 }} /> }
         <Text style={styles.brandName}>{loginBranding.pharmacy_title || "Kanev Pharmacy"}</Text>
         <Text style={styles.tagline}>Preparing your secure workspace…</Text>
       </SafeAreaView>
