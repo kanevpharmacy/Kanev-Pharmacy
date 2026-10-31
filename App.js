@@ -1755,7 +1755,7 @@ export default function App() {
           <Pressable style={styles.headerSearchAll} onPress={() => {openStoreShop('All');setHeaderSearchFocused(false);}}><Text style={styles.headerSearchAllText}>View all search results</Text><Ionicons name="arrow-forward" size={15} color={COLORS.blue}/></Pressable>
         </View>}
       </View>}
-      {!isDesktop && tab !== 'Account' && <View style={[styles.tmNavSticky,{position:'relative',zIndex:60,elevation:8}]}>
+      {!isDesktop && tab !== 'Account' && <View style={[styles.tmNavSticky,{position:'relative',zIndex:60,elevation:8},!isDesktop&&{marginHorizontal:-14}]}>
         {storeMenuItems.length ? <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tmNav} keyboardShouldPersistTaps="handled">
             {storeMenuItems.filter(item => !item.parent_id).map(item => {
