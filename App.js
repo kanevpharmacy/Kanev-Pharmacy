@@ -1861,8 +1861,10 @@ export default function App() {
               <Text style={styles.footerAboutCopy}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text>
               <Text style={styles.footerSmall}>Product availability and dispensing are subject to pharmacy confirmation.</Text>
             </View>
-            <View style={[styles.footerColumn, !isDesktop && styles.footerColumnMobile]}><Text style={styles.footerColumnTitle}>Shop</Text>{['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label=><Pressable key={label} onPress={()=>openStoreShop(label)} style={!isDesktop && styles.footerMobileLink}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
-            <View style={[styles.footerColumn, !isDesktop && styles.footerColumnMobile]}><Text style={styles.footerColumnTitle}>Customer service</Text>{[['My account','Account'],['My cart','Cart'],['Browse products','Shop'],['Get help','Account']].map(([label,target])=><Pressable key={label} onPress={()=>{if(target==='Shop')openStoreShop('All');else if(target==='Account'&&!session?.user)requireCustomerLogin();else if(target==='Cart')openCustomerCart();else setTab(target);}} style={!isDesktop && styles.footerMobileLink}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
+            <View style={styles.footerLinksRow}>
+              <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Shop</Text>{['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label=><Pressable key={label} onPress={()=>openStoreShop(label)} style={!isDesktop && styles.footerMobileLink}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
+              <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Customer service</Text>{[['My account','Account'],['My cart','Cart'],['Browse products','Shop'],['Get help','Account']].map(([label,target])=><Pressable key={label} onPress={()=>{if(target==='Shop')openStoreShop('All');else if(target==='Account'&&!session?.user)requireCustomerLogin();else if(target==='Cart')openCustomerCart();else setTab(target);}} style={!isDesktop && styles.footerMobileLink}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
+            </View>
             <View style={[styles.footerColumn, !isDesktop && styles.footerInfoMobile]}><Text style={styles.footerColumnTitle}>Pharmacy information</Text><View style={!isDesktop && styles.footerInfoGrid}><Text style={styles.footerLink}>{loginBranding.tagline || 'Closer to Your Health'}</Text><Text style={styles.footerLink}>Zambia · Prices in ZMW</Text><Text style={styles.footerLink}>Delivery or collection</Text><Text style={styles.footerLink}>Prescription review available</Text></View></View>
           </View>
           <View style={[styles.footerBottom, !isDesktop && styles.footerBottomMobile]}><Text style={[styles.footerBottomText, !isDesktop && styles.footerBottomTextMobile]}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text><Text style={[styles.footerBottomText, !isDesktop && styles.footerBottomTextMobile]}>Please use medicines responsibly and follow professional advice.</Text></View>
@@ -2098,9 +2100,12 @@ const styles = StyleSheet.create({
   tmSearchInput:{flex:1,minWidth:0,fontSize:12,color:COLORS.ink,outlineStyle:'none',paddingVertical:7},
   fullFooter:{marginTop:28,backgroundColor:'#EAF6FC',marginHorizontal:-32,paddingHorizontal:32,paddingTop:32,paddingBottom:0,borderTopWidth:1,borderTopColor:'#D8E9F0'},
   fullFooterMobile:{marginHorizontal:-14,paddingHorizontal:16,paddingTop:24,paddingBottom:12,borderTopLeftRadius:22,borderTopRightRadius:22},
-  footerTopMobile:{gap:18,paddingBottom:18},
-  footerAboutMobile:{flex:0,width:'100%',maxWidth:'100%',minWidth:0,paddingBottom:4},
-  footerColumnMobile:{flex:1,width:'46%',minWidth:0,gap:7},
+  footerTopMobile:{flexDirection:'column',alignItems:'stretch',gap:18,paddingBottom:18},
+  footerLinksRow:{flex:2,minWidth:290,flexDirection:'row',gap:24},
+  footerLinksRowMobile:{width:'100%',minWidth:0,flex:0,justifyContent:'space-between',gap:12},
+  footerAboutMobile:{flex:0,width:'100%',maxWidth:'100%',minWidth:0,alignSelf:'stretch',paddingBottom:4},
+  footerColumnMobile:{flex:1,minWidth:0,gap:7},
+  footerLinksRowMobileColumn:{flex:1,minWidth:0,width:'48%'},
   footerInfoMobile:{flex:0,width:'100%',minWidth:0,backgroundColor:'rgba(255,255,255,0.58)',borderRadius:13,padding:13,gap:8},
   footerInfoGrid:{flexDirection:'row',flexWrap:'wrap',columnGap:16,rowGap:7},
   footerMobileLink:{minHeight:27,justifyContent:'center',paddingVertical:3},
