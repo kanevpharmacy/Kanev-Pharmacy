@@ -136,6 +136,7 @@ export default function KanevAdminPortal(){
  const homepageSelectionDirty=useRef(false);
  const [brandingSaving,setBrandingSaving]=useState(false);
  const [banners,setBanners]=useState([]); const emptyBannerForm={id:null,name:'',placement:'hero',eyebrow:'',title:'',description:'',button_text:'Shop now',link_url:'',image_url:'',image_urls:[],slideshow_type:'automatic',slideshow_effect:'slide-left',image_size:'placement',image_fit:'cover',mobile_image_url:'',background_color:'#0B4B38',text_color:'#FFFFFF',eyebrow_color:'#C8F36A',button_color:'#C8F36A',sort_order:'0',is_active:true,starts_at:'',ends_at:''}; const [bannerForm,setBannerForm]=useState(emptyBannerForm); const [bannerSaving,setBannerSaving]=useState(false); const [bannerImageBusy,setBannerImageBusy]=useState(false);
+ const [imageOptimizationBusy,setImageOptimizationBusy]=useState(false); const [imageOptimizationProgress,setImageOptimizationProgress]=useState('');
  const [menuItems,setMenuItems]=useState([]); const [menuForm,setMenuForm]=useState({id:null,label:'',node_type:'menu',parent_id:'',sort_order:'0',is_active:true,destination_type:'category',destination_value:''});
  useEffect(()=>{let alive=true; (async()=>{if(!supabaseConfigured){if(alive){setChecking(false);setError('Administration services are not available right now. Check the app configuration or contact your system administrator.')}return;} const {data}=await supabase.auth.getSession(); if(alive&&data.session){setSession(data.session); await verifyAdmin(data.session,alive);} else if(alive)setChecking(false);})(); const {data:listener}=supabase.auth.onAuthStateChange((_e,next)=>{if(alive){setSession(next); if(!next){setRole('');setChecking(false);}}}); return ()=>{alive=false;listener?.subscription?.unsubscribe?.();};},[]);
  async function verifyAdmin(ses,alive=true){setChecking(true);setError(''); try {const {data,error:e}=await supabase.from('admin_members').select('role').eq('user_id',ses.user.id).maybeSingle(); if(e)throw e; if(!data){await supabase.auth.signOut();setError('This account is not registered as a Kanev Pharmacy administrator. Ask the owner to grant access.');setRole('');} else {setRole(data.role); await loadData(); await loadHealthDocuments(ses.user.id);}} catch(e){setError('We could not verify your administrator access. Please try again, and contact the system owner if the issue continues.');} finally{setChecking(false);} }
@@ -193,6 +194,92 @@ export default function KanevAdminPortal(){
     setStats({orders:allOrders.length,pending:allOrders.filter(x=>['pending_review','pending','submitted','awaiting_review'].includes(String(x.status).toLowerCase())).length,products:p.data?.length||0,customers:c.data?.length||0,revenue:allOrders.filter(x=>['paid','completed','delivered'].includes(String(x.status).toLowerCase())).reduce((a,x)=>a+Number(x.total_zmw||0),0)});
   }catch(e){setError(`The dashboard could not refresh: ${e?.message||'please try again.'}`);}finally{setLoading(false);}
 }
+ async function runExistingImageOptimization(){
+  if(Platform.OS!=='web'){setError('Run this operation from the Kanev Pharmacy admin website. Browser image compression is required; no existing images have been changed.');return;}
+  if(!session?.user?.id||imageOptimizationBusy)return;
+  setImageOptimizationBusy(true);setImageOptimizationProgress('Loading image records…');setError('');
+  const summary={scanned:0,optimized:0,skipped:0,failed:0};
+  const cache=new Map();
+  const optimizeUrl=async(rawUrl,maxDimension,quality)=>{
+   if(!rawUrl||typeof rawUrl!=='string')return rawUrl;
+   if(cache.has(rawUrl))return cache.get(rawUrl);
+   let parsed;
+   try{parsed=new URL(rawUrl);}catch{return null;}
+   const storagePrefix='/storage/v1/object/public/';
+   const marker=parsed.pathname.indexOf(storagePrefix);
+   if(marker<0){summary.skipped++;return null;}
+   const tail=parsed.pathname.slice(marker+storagePrefix.length);
+   const slash=tail.indexOf('/');
+   if(slash<1){summary.skipped++;return null;}
+   const bucket=decodeURIComponent(tail.slice(0,slash));
+   const objectPath=decodeURIComponent(tail.slice(slash+1));
+   if(!['product-images','store-banners'].includes(bucket)||!objectPath){summary.skipped++;return null;}
+   summary.scanned++;
+   const {blob,mime,ext}=await prepareOptimizedImage({uri:rawUrl,mimeType:''},{maxDimension,quality});
+   if(!blob||!blob.size)throw new Error('Compression returned an empty image.');
+   if(blob.size>= (await (await fetch(rawUrl)).blob()).size){summary.skipped++;cache.set(rawUrl,rawUrl);return rawUrl;}
+   const newPath=`optimized/${objectPath.replace(/\\.[^/.]+$/,'')}-${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
+   const {error:uploadError}=await supabase.storage.from(bucket).upload(newPath,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
+   if(uploadError)throw uploadError;
+   const {data}=supabase.storage.from(bucket).getPublicUrl(newPath);
+   const nextUrl=`${data.publicUrl}?v=${Date.now()}`;
+   summary.optimized++;cache.set(rawUrl,nextUrl);return nextUrl;
+  };
+  const updateRecords=async(table,rows,fields,maxDimension,quality,label)=>{
+   for(let index=0;index<rows.length;index++){
+    const row=rows[index];setImageOptimizationProgress(`Optimizing ${label} ${index+1} of ${rows.length}…`);
+    const patch={};
+    try{
+     for(const field of fields){
+      const value=row[field];
+      if(typeof value==='string'&&value.trim()){
+       const next=await optimizeUrl(value,maxDimension,quality);
+       if(next&&next!==value)patch[field]=next;
+      }else if(Array.isArray(value)&&value.length){
+       const next=[];
+       for(const url of value){const optimized=await optimizeUrl(url,maxDimension,quality);next.push(optimized||url);}
+       if(next.some((url,i)=>url!==value[i]))patch[field]=next;
+      }
+     }
+     if(Object.keys(patch).length){
+      const {error:updateError}=await supabase.from(table).update(patch).eq('id',row.id);
+      if(updateError)throw updateError;
+     }
+    }catch(e){summary.failed++;if(summary.failed<=3)console.warn(`Image optimization failed for ${table} record ${row.id}:`,e?.message||e);}
+    }
+  };
+  try{
+   const [productsResult,categoriesResult,bannersResult,brandingResult]=await Promise.all([
+    supabase.from('products').select('*'),
+    supabase.from('categories').select('*'),
+    supabase.from('store_banners').select('*'),
+    supabase.from('app_login_branding').select('*').eq('id','default').maybeSingle()
+   ]);
+   for(const result of [productsResult,categoriesResult,bannersResult,brandingResult])if(result.error)throw result.error;
+   await updateRecords('products',productsResult.data||[],['image_url','image_urls'],1400,0.78,'products');
+   await updateRecords('categories',categoriesResult.data||[],['image_url'],700,0.76,'categories');
+   await updateRecords('store_banners',bannersResult.data||[],['image_url','image_urls','mobile_image_url'],1800,0.78,'banners');
+   if(brandingResult.data){
+    const row=brandingResult.data,patch={};
+    for(const field of ['loading_logo_url','header_logo_url','logo_left_url','logo_form_url','left_background_image_url']){
+     if(typeof row[field]==='string'&&row[field]){
+      try{const next=await optimizeUrl(row[field],900,0.82);if(next&&next!==row[field])patch[field]=next;}
+      catch(e){summary.failed++;if(summary.failed<=3)console.warn('Branding image optimization failed:',e?.message||e);}
+     }
+    }
+    if(Object.keys(patch).length){
+     const {error:updateError}=await supabase.from('app_login_branding').update(patch).eq('id','default');
+     if(updateError)throw updateError;
+    }
+   }
+   await loadData();
+   setImageOptimizationProgress('');
+   setError(`Existing image optimization finished. ${summary.optimized} image(s) optimized; ${summary.skipped} skipped (already smaller, external, or unsupported); ${summary.failed} failed. Original storage files were retained.`);
+  }catch(e){
+   setImageOptimizationProgress('');
+   setError(`Image optimization stopped: ${e?.message||'check administrator permissions and Storage access.'} ${summary.optimized} image(s) were optimized before the error; original files were retained.`);
+  }finally{setImageOptimizationBusy(false);}
+ }
  async function loadHealthDocuments(userId=session?.user?.id){
   if(!supabaseConfigured || !userId)return;
   const {data,error:e}=await supabase.from('customer_health_documents').select('id,customer_id,document_type,title,notes,file_path,file_name,mime_type,file_size,status,admin_feedback,reviewed_by,reviewed_at,created_at,updated_at,conversation_closed_at').order('created_at',{ascending:false}).limit(200);
@@ -939,7 +1026,7 @@ if(page==='Overview')return <><View style={s.pageHead}><View><Text style={s.page
 <Field label="Benefit line 1" value={branding.benefit_one} onChangeText={v=>setBranding({...branding,benefit_one:v})}/><Field label="Benefit line 2" value={branding.benefit_two} onChangeText={v=>setBranding({...branding,benefit_two:v})}/><Field label="Benefit line 3" value={branding.benefit_three} onChangeText={v=>setBranding({...branding,benefit_three:v})}/>
 <AppearancePicker label="Benefit text colour" value={branding.benefit_color} onChange={v=>setBranding({...branding,benefit_color:v})}/><AppearancePicker label="Benefit font family" kind="font" value={branding.benefit_font_family} onChange={v=>setBranding({...branding,benefit_font_family:v})}/><AppearancePicker label="Welcome label colour" value={branding.right_eyebrow_color} onChange={v=>setBranding({...branding,right_eyebrow_color:v})}/><AppearancePicker label="Welcome label font family" kind="font" value={branding.right_eyebrow_font_family} onChange={v=>setBranding({...branding,right_eyebrow_font_family:v})}/><AppearancePicker label="Right heading colour" value={branding.right_heading_color} onChange={v=>setBranding({...branding,right_heading_color:v})}/><AppearancePicker label="Right heading font family" kind="font" value={branding.right_heading_font_family} onChange={v=>setBranding({...branding,right_heading_font_family:v})}/><AppearancePicker label="Right intro colour" value={branding.right_intro_color} onChange={v=>setBranding({...branding,right_intro_color:v})}/><AppearancePicker label="Right intro font family" kind="font" value={branding.right_intro_font_family} onChange={v=>setBranding({...branding,right_intro_font_family:v})}/>{[['Benefit text size (px)','benefit_size'],['Benefit font style (normal/bold/italic)','benefit_style'],['Welcome label size (px)','right_eyebrow_size'],['Welcome label font style (normal/bold/italic)','right_eyebrow_style'],['Right heading size (px)','right_heading_size'],['Right heading font style (normal/bold/italic)','right_heading_style'],['Right intro size (px)','right_intro_size'],['Right intro font style (normal/bold/italic)','right_intro_style']].map(([label,key])=><Field key={key} label={label} value={String(branding[key]??'')} onChangeText={v=>setBranding({...branding,[key]:key.endsWith('_size')?(Number(v)||12):v})} keyboardType={key.endsWith('_size')?'number-pad':'default'}/>)}
 <View style={{height:6}}/><View style={{backgroundColor:branding.left_background_color||GREEN,borderRadius:12,padding:18,gap:7}}><Text style={{fontSize:Number(branding.left_heading_size)||19,fontFamily:branding.left_heading_font_family==='System'?undefined:branding.left_heading_font_family,fontWeight:branding.left_heading_style==='normal'?'400':'900',fontStyle:branding.left_heading_style==='italic'?'italic':'normal',color:branding.left_heading_color||'#FFFFFF',textAlign:'center'}}>{branding.left_heading||branding.pharmacy_title}</Text><Text style={{fontSize:Number(branding.left_description_size)||12,fontFamily:branding.left_description_font_family==='System'?undefined:branding.left_description_font_family,fontWeight:branding.left_description_style==='bold'?'700':'400',fontStyle:branding.left_description_style==='italic'?'italic':'normal',lineHeight:18,color:branding.left_description_color||'#E4F2EB',textAlign:'center'}}>{branding.left_description}</Text><Text style={{fontSize:11,color:'#FFFFFF'}}>✓ {branding.benefit_one}</Text><Text style={{fontSize:11,color:'#FFFFFF'}}>✓ {branding.benefit_two}</Text><Text style={{fontSize:11,color:'#FFFFFF'}}>✓ {branding.benefit_three}</Text></View><Btn onPress={saveBranding} disabled={brandingSaving}>{brandingSaving?'Saving branding…':'Save login branding'}</Btn></View><View style={s.notice}><Ionicons name="information-circle-outline" size={22} color={GREEN}/><View style={{flex:1}}><Text style={s.rowTitle}>Shared login and registration</Text><Text style={s.muted}>Both sign-in and create-account modes use the same saved branding. Customer role handling and staff email verification remain separate from visual settings. This panel changes appearance only, not permissions.</Text></View></View></>;
- return <><PageHeader title="Settings" subtitle="Portal access and pharmacy configuration."/><View style={s.panel}><Text style={s.panelTitle}>Signed-in administrator</Text><Text style={s.rowTitle}>{session.user.email}</Text><Text style={s.muted}>Role: {role}</Text><Text style={s.muted}>Account services: {supabaseConfigured?'Connected':'Unavailable'}</Text><View style={{height:12}}/><Btn outline onPress={async()=>{await supabase.auth.signOut();setSession(null);setRole('');}}>Sign out</Btn></View><View style={s.notice}><Ionicons name="lock-closed-outline" size={22} color={GREEN}/><View style={{flex:1}}><Text style={s.rowTitle}>Security note</Text><Text style={s.muted}>Sensitive product changes, order updates, prescription reviews and payment actions must be checked by secure server-side permissions. Never expose private server credentials in the app.</Text></View></View></>;
+ return <><PageHeader title="Settings" subtitle="Portal access and pharmacy configuration."/><View style={s.panel}><View style={{gap:8}}><Text style={s.panelTitle}>Existing image optimization</Text><Text style={s.muted}>Compress images already stored for products, categories, banners and login branding. New optimized copies are uploaded and database links are updated only after each upload succeeds. Original files are never deleted.</Text><Text style={s.muted}>This operation runs in the admin website and processes images stored in the product-images and store-banners buckets. Images hosted elsewhere are skipped.</Text>{imageOptimizationProgress?<Text style={{fontSize:12,fontWeight:'800',color:GREEN}}>{imageOptimizationProgress}</Text>:null}<Btn onPress={runExistingImageOptimization} disabled={imageOptimizationBusy||!supabaseConfigured}>{imageOptimizationBusy?'Optimizing existing images…':'Optimize existing images'}</Btn></View></View><View style={s.panel}><Text style={s.panelTitle}>Signed-in administrator</Text><Text style={s.rowTitle}>{session.user.email}</Text><Text style={s.muted}>Role: {role}</Text><Text style={s.muted}>Account services: {supabaseConfigured?'Connected':'Unavailable'}</Text><View style={{height:12}}/><Btn outline onPress={async()=>{await supabase.auth.signOut();setSession(null);setRole('');}}>Sign out</Btn></View><View style={s.notice}><Ionicons name="lock-closed-outline" size={22} color={GREEN}/><View style={{flex:1}}><Text style={s.rowTitle}>Security note</Text><Text style={s.muted}>Sensitive product changes, order updates, prescription reviews and payment actions must be checked by secure server-side permissions. Never expose private server credentials in the app.</Text></View></View></>;
  };
  return <SafeAreaView style={s.root}><View style={[s.topbar,{paddingHorizontal:desktop?28:14}]}><View style={s.brandIconSmall}><Ionicons name="medical-outline" size={22} color={LIME}/></View><View style={{flex:1}}><Text style={s.brand}>Kanev Pharmacy</Text><Text style={s.brandSub}>Administration</Text></View><View style={s.roleBadge}><Text style={s.roleText}>{role}</Text></View><Pressable onPress={loadData} style={s.refreshIcon}><Ionicons name="refresh" size={19} color={GREEN}/></Pressable></View><View style={[s.body,desktop&&{flexDirection:'row'}]}>{desktop?<ScrollView style={s.sidebar} contentContainerStyle={{flexGrow:1}} showsVerticalScrollIndicator>{<Text style={s.sideLabel}>WORKSPACE</Text>}{menu.map(([label,icon])=><NavItem key={label} label={label} icon={icon} badge={label==='Prescriptions'?healthDocuments.filter(d=>String(d.status||'submitted').toLowerCase()==='submitted').length:0} active={page===label} onPress={()=>{setPage(label);setSearch('');}}/>)}<View style={{flex:1,minHeight:12}}/><Text style={s.sideFooter}>Closer to Your Health</Text></ScrollView>:<ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.mobileNav}>{menu.map(([label,icon])=><Pressable key={label} onPress={()=>setPage(label)} style={[s.mobileNavItem,page===label&&s.mobileNavActive]}><Ionicons name={icon} size={17} color={page===label?GREEN:MUTED}/><Text style={[s.mobileNavText,page===label&&{color:GREEN}]}>{label}</Text>{label==='Prescriptions'&&healthDocuments.some(d=>String(d.status||'submitted').toLowerCase()==='submitted')?<View style={{marginLeft:4,minWidth:18,height:18,paddingHorizontal:5,borderRadius:9,backgroundColor:LIME,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:10,fontWeight:'900',color:GREEN}}>{healthDocuments.filter(d=>String(d.status||'submitted').toLowerCase()==='submitted').length}</Text></View>:null}</Pressable>)}</ScrollView>}<ScrollView style={s.mainScroll} contentContainerStyle={[s.mainContent,{padding:desktop?28:15,maxWidth:desktop?1450:900,alignSelf:'stretch'}]}>{content()}</ScrollView></View><KanevNoticeModal visible={!!error} title={error && /saved successfully|saved\.|uploaded\./i.test(error)?'Update complete':'Something needs attention'} message={error} tone={error && /saved successfully|saved\.|uploaded\./i.test(error)?'success':'error'} onClose={()=>setError('')}/>
  <Modal visible={!!documentPreview} animationType="slide" presentationStyle="fullScreen" onRequestClose={()=>setDocumentPreview(null)}>
