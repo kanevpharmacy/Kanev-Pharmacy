@@ -1852,19 +1852,19 @@ export default function App() {
         {[
           {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
           {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
-          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
+          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,badge:healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin').length,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
           {name:'Account',icon:'person-outline',active:(tab==='Account'||tab==='Orders')&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
         ].map(item=>(
           <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
-            <View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>
+            <View style={{position:'relative'}}><View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>{item.badge>0?<View style={{position:'absolute',right:-9,top:-7,minWidth:19,height:19,paddingHorizontal:5,borderRadius:10,backgroundColor:'#D92D20',borderWidth:2,borderColor:'#FFFFFF',alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:9,fontWeight:'900',color:'#FFFFFF'}}>{item.badge>99?'99+':item.badge}</Text></View>:null}</View>
             <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
           </Pressable>
         ))}
       </View>
       {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
         <View style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
-          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-            <View><Text style={{fontSize:16,fontWeight:'900',color:COLORS.ink}}>Healthcare services</Text><Text style={{fontSize:11,color:COLORS.muted,marginTop:3}}>Choose a service to continue</Text></View>
+          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12,gap:10}}>
+            <View style={{flex:1}}><Text style={{fontSize:16,fontWeight:'900',color:COLORS.ink}}>Healthcare services</Text><Text style={{fontSize:11,color:COLORS.muted,marginTop:3}}>Choose a service to continue</Text>{healthDocuments.some(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin')?<Text style={{fontSize:10,fontWeight:'800',color:'#B42318',marginTop:5}}>You have new pharmacy replies</Text>:null}</View>
             <Pressable onPress={()=>setMobileServicesOpen(false)} style={{width:32,height:32,borderRadius:16,backgroundColor:'#F1F7F3',alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={19} color={COLORS.green}/></Pressable>
           </View>
           <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
@@ -1874,7 +1874,7 @@ export default function App() {
               {title:'Delivery',sub:'Delivery information and tracking',icon:'car-outline',run:()=>{if(session?.user){if(!isDesktop){setTab('Orders');}else{setAccountSection('orders');setTab('Account');}}else{setTab('Account');setAuthMode('signin');setAuthModalVisible(true);}}},
               {title:'Health insurance',sub:'Insurance and co-pay support',icon:'shield-checkmark-outline',run:()=>notify('Health insurance','Contact Kanev Pharmacy to confirm accepted insurance providers and co-pay arrangements.')},
             ].map(item=><Pressable key={item.title} onPress={()=>{setMobileServicesOpen(false);setSelectedProduct(null);item.run();}} style={{width:'48%',flexGrow:1,minHeight:92,borderRadius:13,borderWidth:1,borderColor:'#E1EBE5',backgroundColor:'#FBFDFC',padding:11,gap:6}}>
-              <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View style={{width:34,height:34,borderRadius:11,backgroundColor:'#E8F5ED',alignItems:'center',justifyContent:'center'}}><Ionicons name={item.icon} size={19} color={COLORS.green}/></View>{item.badge>0?<View style={{minWidth:21,height:21,paddingHorizontal:6,borderRadius:11,backgroundColor:'#C8F36A',alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:11,fontWeight:'900',color:'#064E3B'}}>{item.badge>99?'99+':item.badge}</Text></View>:null}</View>
+              <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View style={{width:34,height:34,borderRadius:11,backgroundColor:'#E8F5ED',alignItems:'center',justifyContent:'center'}}><Ionicons name={item.icon} size={19} color={COLORS.green}/></View>{item.badge>0?<View style={{paddingHorizontal:8,minHeight:23,borderRadius:12,backgroundColor:'#FEE4E2',borderWidth:1,borderColor:'#FDA29B',alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:10,fontWeight:'900',color:'#B42318'}}>NEW REPLY · {item.badge>99?'99+':item.badge}</Text></View>:null}</View>
               <Text style={{fontSize:12,fontWeight:'900',color:COLORS.ink}}>{item.title}</Text><Text style={{fontSize:10,color:COLORS.muted,lineHeight:14}}>{item.sub}</Text>
             </Pressable>)}
           </View>
