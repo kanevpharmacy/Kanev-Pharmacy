@@ -1873,24 +1873,16 @@ export default function App() {
         {renderPage()}
         <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16 }]} >
           <View style={styles.footerTop}>
-            <View style={styles.footerAbout}><View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.foot      {Platform.OS === 'web' && typeof document !== 'undefined' ? createPortal(mobileTabBar, document.body) : mobileTabBar}
-      {!isDesktop && mobileServicesOpenstyle={styles.footerBottomText}>Please use medicines responsibly and follow professional advice.</Text></View>
+            <View style={styles.footerAbout}><View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}<View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text></View></View><Text style={styles.footerAboutCopy}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text><Text style={styles.footerSmall}>Product availability and dispensing are subject to pharmacy confirmation.</Text></View>
+            <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Shop</Text>{['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label=><Pressable key={label} onPress={()=>openStoreShop(label)}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
+            <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Customer service</Text>{[['My account','Account'],['My cart','Cart'],['Browse products','Shop'],['Get help','Account']].map(([label,target])=><Pressable key={label} onPress={()=>{if(target==='Shop')openStoreShop('All');else if(target==='Account'&&!session?.user)requireCustomerLogin();else if(target==='Cart')openCustomerCart();else setTab(target);}}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
+            <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Pharmacy information</Text><Text style={styles.footerLink}>{loginBranding.tagline || 'Closer to Your Health'}</Text><Text style={styles.footerLink}>Zambia · Prices in ZMW</Text><Text style={styles.footerLink}>Delivery or collection</Text><Text style={styles.footerLink}>Prescription review available</Text></View>
+          </View>
+          <View style={styles.footerBottom}><Text style={styles.footerBottomText}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text><Text style={styles.footerBottomText}>Please use medicines responsibly and follow professional advice.</Text></View>
         </View>
 
       </ScrollView>
-      <View pointerEvents="box-none" style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
-        {[
-          {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
-          {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
-          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,badge:healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
-          {name:'Account',icon:'person-outline',active:(tab==='Account'||tab==='Orders')&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
-        ].map(item=>(
-          <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
-            <View style={{position:'relative'}}><View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>{item.badge>0?<View style={{position:'absolute',right:-9,top:-7,minWidth:19,height:19,paddingHorizontal:5,borderRadius:10,backgroundColor:'#2563EB',borderWidth:2,borderColor:'#FFFFFF',alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:9,fontWeight:'900',color:'#FFFFFF'}}>{item.badge>99?'99+':item.badge}</Text></View>:null}</View>
-            <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {Platform.OS === 'web' && typeof document !== 'undefined' ? createPortal(mobileTabBar, document.body) : mobileTabBar}
       {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
         <View style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12,gap:10}}>
