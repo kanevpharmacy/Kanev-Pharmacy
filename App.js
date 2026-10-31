@@ -413,8 +413,12 @@ export default function App() {
       let productQuery = initialProductResult;
       if (productQuery.error && /image_urls|column .* does not exist|42703/i.test([productQuery.error.message,productQuery.error.details,productQuery.error.code].join(' '))) {
         console.warn('[Kanev catalogue] image_urls migration is pending; loading primary product images.');
-        productQuery = await supabase.from('products').select(productColumns)
-          .eq('is_active', true).order('is_featured', { ascending: false }).order('name');
+        // Use only the long-standing core columns in the compatibility path.
+        // Some live databases may also be missing newer fields such as
+        // is_featured or menu_subcategory_id, so do not request them here.
+        productQuery = await supabase.from('products')
+          .select('id,name,slug,description,brand,image_url,price_zmw,stock_quantity,requires_prescription,is_active,category_id')
+          .eq('is_active', true).order('name');
       }
       const { data, error } = productQuery;
       if (error) throw error;
