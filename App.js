@@ -1602,12 +1602,12 @@ export default function App() {
                   </View>
                 </View>
               </View>
-              <View style={styles.myAccountSectionHeader}><View><Text style={styles.myAccountSectionTitle}>My submissions</Text><Text style={styles.myAccountSectionSub}>Feedback and status updates from Kanev Pharmacy</Text></View><Text style={styles.myAccountSectionSub}>Updates automatically</Text></View>
+              <View style={[styles.myAccountSectionHeader,!isDesktop&&{alignItems:'flex-start',flexDirection:'column',gap:3}]}><View><Text style={styles.myAccountSectionTitle}>My submissions</Text><Text style={styles.myAccountSectionSub}>Feedback and status updates from Kanev Pharmacy</Text></View>{isDesktop&&<Text style={styles.myAccountSectionSub}>Updates automatically</Text>}</View>
               {visibleHealthDocuments.length===0?<View style={styles.myAccountEmpty}><View style={styles.myAccountEmptyIcon}><Ionicons name="document-text-outline" size={27} color={COLORS.green}/></View><Text style={styles.myAccountEmptyTitle}>No documents submitted</Text><Text style={styles.myAccountEmptyCopy}>{activeDocType === 'lab_result' ? 'Your submitted lab results will appear here with review updates.' : activeDocType === 'prescription' ? 'Your submitted prescriptions will appear here with review updates.' : 'Your uploaded prescriptions and lab results will appear here with review updates.'}</Text></View>:visibleHealthDocuments.map(doc=>{
                 const messages=healthDocMessages[doc.id]||[], closed=!!doc.conversation_closed_at;
                 const expanded = expandedHealthDocumentId === doc.id;
-                return <View key={doc.id} style={[styles.myAccountOrderRow,{alignItems:'stretch',marginBottom:8,paddingVertical:0}]}>
-                  <Pressable onPress={()=>setExpandedHealthDocumentId(expanded?null:doc.id)} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:11}}>
+                return <View key={doc.id} style={[styles.myAccountOrderRow,{alignItems:'stretch',marginBottom:10,paddingVertical:0},!isDesktop&&{borderWidth:1,borderColor:COLORS.border,borderRadius:13,backgroundColor:'#FFFFFF',paddingHorizontal:12,overflow:'hidden'}]}>
+                  <Pressable onPress={()=>setExpandedHealthDocumentId(expanded?null:doc.id)} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:12,flexWrap:'wrap'}}>
                     <View style={[styles.myAccountOrderIcon,{width:36,height:36}]}><Ionicons name={doc.document_type==='prescription'?'document-text-outline':'flask-outline'} size={19} color={COLORS.green}/></View>
                     <View style={{flex:1,minWidth:0,gap:3}}>
                       <Text style={styles.accountRowTitle}>{healthDocumentNumber(doc)}</Text>
@@ -1767,7 +1767,7 @@ export default function App() {
           {['Medicines', 'Personal Care', 'Wellness', 'Baby Care', 'Skincare', 'Medical Supplies'].map(label => <Pressable key={label} onPress={() => openStoreShop(label)} style={styles.tmNavLink}><Text style={styles.tmNavText}>{label}</Text></Pressable>)}
         </ScrollView>}
       </View>}
-{!isDesktop && tab !== 'Shop' && tab !== 'Account' && tab !== 'Orders' && <View style={styles.mobileHeaderSearchWrap}>
+{!isDesktop && !['Shop','Account','Orders','Prescriptions','LabResults'].includes(tab) && <View style={styles.mobileHeaderSearchWrap}>
         <View style={styles.mobileHeaderSearch}>
           <Ionicons name="search-outline" size={19} color={COLORS.muted}/>
           <TextInput value={query} onFocus={() => { if (!session?.user) { requireCustomerLogin(); return; } setHeaderSearchFocused(true); }} onBlur={() => setTimeout(() => setHeaderSearchFocused(false), 350)} onChangeText={value => { if (session?.user) setQuery(value); }} onSubmitEditing={() => openStoreShop('All')} placeholder="" placeholderTextColor="#7C8A84" style={styles.mobileHeaderSearchInput} returnKeyType="search" />
