@@ -1741,7 +1741,7 @@ export default function App() {
   }
 
   const mobileTabBar = (
-      <View pointerEvents="box-none" style={[styles.tabBar, isDesktop && styles.tabBarDesktop, Platform.OS === 'web' && { position: 'fixed', left: 0, right: 0, bottom: 0, width: '100vw', zIndex: 2147483000 }]}>
+      <View pointerEvents="box-none" style={[styles.tabBar, isDesktop && styles.tabBarDesktop, Platform.OS === 'web' && { position: 'relative', left: undefined, right: undefined, bottom: undefined, width: '100%', zIndex: 1 }]}>
         {[
           {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
           {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
@@ -1882,7 +1882,36 @@ export default function App() {
         </View>
 
       </ScrollView>
-      {Platform.OS === 'web' && typeof document !== 'undefined' ? createPortal(mobileTabBar, document.body) : mobileTabBar}
+      {Platform.OS === 'web' && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              id="kanev-mobile-bottom-navigation"
+              style={{
+                position: 'fixed',
+                insetInline: 0,
+                bottom: 'env(safe-area-inset-bottom, 0px)',
+                width: '100%',
+                minHeight: 66,
+                zIndex: 2147483647,
+                display: isDesktop ? 'none' : 'flex',
+                alignItems: 'stretch',
+                background: '#FFFFFF',
+                transform: 'translate3d(0,0,0)',
+                WebkitTransform: 'translate3d(0,0,0)',
+                WebkitBackfaceVisibility: 'hidden',
+                backfaceVisibility: 'hidden',
+                isolation: 'isolate',
+                boxSizing: 'border-box',
+                borderTop: '1px solid #E3EBE6',
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                margin: 0,
+              }}
+            >
+              {mobileTabBar}
+            </div>,
+            document.body
+          )
+        : mobileTabBar}
       {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
         <View style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12,gap:10}}>
