@@ -218,7 +218,7 @@ export default function KanevAdminPortal(){
    const {blob,mime,ext}=await prepareOptimizedImage({uri:rawUrl,mimeType:''},{maxDimension,quality});
    if(!blob||!blob.size)throw new Error('Compression returned an empty image.');
    if(blob.size>= (await (await fetch(rawUrl)).blob()).size){summary.skipped++;cache.set(rawUrl,rawUrl);return rawUrl;}
-   const newPath=`optimized/${objectPath.replace(/\\.[^/.]+$/,'')}-${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
+   const newPath=`optimized/${objectPath.replace(/\.[^/.]+$/,'')}-${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
    const {error:uploadError}=await supabase.storage.from(bucket).upload(newPath,blob,{upsert:false,contentType:mime,cacheControl:'31536000'});
    if(uploadError)throw uploadError;
    const {data}=supabase.storage.from(bucket).getPublicUrl(newPath);
