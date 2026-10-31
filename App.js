@@ -1740,7 +1740,7 @@ export default function App() {
   }
 
   return (
-    <AppSafeAreaView style={styles.safe}>
+    <AppSafeAreaView style={[styles.safe, Platform.OS === 'web' && styles.webAppViewport]}>
       <ExpoStatusBar style="dark" />
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       {Header()}
@@ -2096,6 +2096,9 @@ const styles = StyleSheet.create({
   footerTop:{flexDirection:'row',flexWrap:'wrap',gap:30,paddingBottom:28},footerAbout:{flex:2,minWidth:220,maxWidth:370},footerLogoRow:{flexDirection:'row',alignItems:'center',gap:10},footerLogo:{width:39,height:39,borderRadius:12,backgroundColor:COLORS.green,alignItems:'center',justifyContent:'center'},footerAboutCopy:{fontSize:12,lineHeight:19,color:'#526C7A',marginTop:14,maxWidth:330},
   footerColumn:{flex:1,minWidth:145,gap:11},footerColumnTitle:{fontSize:13,fontWeight:'900',color:COLORS.ink,marginBottom:3},footerLink:{fontSize:11,lineHeight:17,color:'#4D6D7D'},footerBottom:{borderTopWidth:1,borderTopColor:'#D5E7EF',minHeight:55,flexDirection:'row',flexWrap:'wrap',alignItems:'center',justifyContent:'space-between',gap:8,paddingVertical:13},footerBottomText:{fontSize:10,color:'#66808D'},
   safe: { flex: 1, backgroundColor: COLORS.background },
+  // Keep the web app itself inside the viewport. The page content then scrolls
+  // inside ScrollView, while the bottom navigation stays anchored to this frame.
+  webAppViewport: { height: '100vh', maxHeight: '100vh', width: '100%', overflow: 'hidden', position: 'relative' },
   header: { position: 'relative', zIndex: 1000, elevation: 30, minHeight: 76, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: COLORS.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   logoMark: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.green, alignItems: 'center', justifyContent: 'center', position: 'relative' },
