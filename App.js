@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView, View, Text, TextInput, ScrollView, Pressable, Animated,
@@ -185,37 +184,6 @@ function KanevOrderProgress({ status, fulfilment }) {
 }
 
 export default function App() {
-  // Mobile browsers can move their address/tool bars independently of the layout
-  // viewport. Keep the bottom navigation aligned to the *visible* viewport.
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
-    const updateVisibleViewportPosition = () => {
-      const bar = document.getElementById('kanev-mobile-bottom-navigation');
-      if (!bar) return;
-      const visual = window.visualViewport;
-      if (!visual) {
-        bar.style.bottom = '0px';
-        return;
-      }
-      const visibleBottom = visual.offsetTop + visual.height;
-      const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
-      const bottomGap = Math.max(0, layoutHeight - visibleBottom);
-      bar.style.bottom = `${bottomGap}px`;
-    };
-    updateVisibleViewportPosition();
-    const visual = window.visualViewport;
-    window.addEventListener('resize', updateVisibleViewportPosition, { passive: true });
-    window.addEventListener('orientationchange', updateVisibleViewportPosition, { passive: true });
-    visual?.addEventListener('resize', updateVisibleViewportPosition, { passive: true });
-    visual?.addEventListener('scroll', updateVisibleViewportPosition, { passive: true });
-    return () => {
-      window.removeEventListener('resize', updateVisibleViewportPosition);
-      window.removeEventListener('orientationchange', updateVisibleViewportPosition);
-      visual?.removeEventListener('resize', updateVisibleViewportPosition);
-      visual?.removeEventListener('scroll', updateVisibleViewportPosition);
-    };
-  }, []);
-
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isDesktop = viewportWidth >= 1024;
   const isTablet = viewportWidth >= 640 && viewportWidth < 1024;
@@ -1771,22 +1739,6 @@ export default function App() {
     return <KanevAdminPortal onExit={() => { setNotice(current => ({ ...current, visible: false })); setTab('Home'); setSelectedProduct(null); }} />;
   }
 
-  const mobileTabBar = (
-      <View pointerEvents="box-none" style={[styles.tabBar, isDesktop && styles.tabBarDesktop, Platform.OS === 'web' && { position: 'relative', left: undefined, right: undefined, bottom: undefined, width: '100%', zIndex: 1 }]}>
-        {[
-          {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
-          {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
-          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,badge:healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
-          {name:'Account',icon:'person-outline',active:(tab==='Account'||tab==='Orders')&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
-        ].map(item=>(
-          <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
-            <View style={{position:'relative'}}><View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>{item.badge>0?<View style={{position:'absolute',right:-9,top:-7,minWidth:19,height:19,paddingHorizontal:5,borderRadius:10,backgroundColor:'#2563EB',borderWidth:2,borderColor:'#FFFFFF',alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:9,fontWeight:'900',color:'#FFFFFF'}}>{item.badge>99?'99+':item.badge}</Text></View>:null}</View>
-            <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
-          </Pressable>
-        ))}
-      </View>
-  );
-
   return (
     <AppSafeAreaView style={styles.safe}>
       <ExpoStatusBar style="dark" />
@@ -1913,36 +1865,19 @@ export default function App() {
         </View>
 
       </ScrollView>
-      {Platform.OS === 'web' && typeof document !== 'undefined'
-        ? createPortal(
-            <div
-              id="kanev-mobile-bottom-navigation"
-              style={{
-                position: 'fixed',
-                insetInline: 0,
-                bottom: 'env(safe-area-inset-bottom, 0px)',
-                width: '100%',
-                minHeight: 66,
-                zIndex: 2147483647,
-                display: isDesktop ? 'none' : 'flex',
-                alignItems: 'stretch',
-                background: '#FFFFFF',
-                transform: 'translate3d(0,0,0)',
-                WebkitTransform: 'translate3d(0,0,0)',
-                WebkitBackfaceVisibility: 'hidden',
-                backfaceVisibility: 'hidden',
-                isolation: 'isolate',
-                boxSizing: 'border-box',
-                borderTop: '1px solid #E3EBE6',
-                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-                margin: 0,
-              }}
-            >
-              {mobileTabBar}
-            </div>,
-            document.body
-          )
-        : mobileTabBar}
+      <View pointerEvents="box-none" style={[styles.tabBar, isDesktop && styles.tabBarDesktop]}>
+        {[
+          {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
+          {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
+          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,badge:healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
+          {name:'Account',icon:'person-outline',active:(tab==='Account'||tab==='Orders')&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
+        ].map(item=>(
+          <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
+            <View style={{position:'relative'}}><View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>{item.badge>0?<View style={{position:'absolute',right:-9,top:-7,minWidth:19,height:19,paddingHorizontal:5,borderRadius:10,backgroundColor:'#2563EB',borderWidth:2,borderColor:'#FFFFFF',alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:9,fontWeight:'900',color:'#FFFFFF'}}>{item.badge>99?'99+':item.badge}</Text></View>:null}</View>
+            <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
+          </Pressable>
+        ))}
+      </View>
       {!isDesktop && mobileServicesOpen && <Pressable onPress={()=>setMobileServicesOpen(false)} style={{position:'absolute',top:0,left:0,right:0,bottom:68,zIndex:80,backgroundColor:'rgba(8,28,20,0.22)'}} accessibilityLabel="Close services menu">
         <View style={{position:'absolute',left:12,right:12,bottom:10,backgroundColor:'#FFFFFF',borderRadius:20,padding:15,borderWidth:1,borderColor:COLORS.border,elevation:18,shadowColor:'#102B20',shadowOpacity:.16,shadowRadius:16,shadowOffset:{width:0,height:5}}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:12,gap:10}}>
@@ -2174,7 +2109,7 @@ const styles = StyleSheet.create({
   pageContent: { paddingHorizontal: 18, paddingTop: 19, paddingBottom: 28, maxWidth: 1320, width: '100%', alignSelf: 'center' },
   pageContentDesktop: { paddingHorizontal: 32, paddingTop: 24, paddingBottom: 40, maxWidth: 1320 },
   pageContentTablet: { paddingHorizontal: 24, paddingTop: 20 },
-  pageContentMobile: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 100 },
+  pageContentMobile: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 22 },
   headerDesktop: { paddingHorizontal: 32, minHeight: 82 },
   headerCompact: { paddingHorizontal: 14, minHeight: 56, paddingVertical: 7, gap: 6 },
   tabBarDesktop: { display: 'none' },
@@ -2361,7 +2296,7 @@ const styles = StyleSheet.create({
   footerBrand: { color: COLORS.green, fontWeight: '900', fontSize: 14 },
   footerTagline: { color: COLORS.blue, fontWeight: '700', fontSize: 11, marginTop: 3 },
   footerSmall: { color: COLORS.muted, fontSize: 10, textAlign: 'center', lineHeight: 15, marginTop: 10, maxWidth: 340 },
-  tabBar: { position: Platform.OS === 'web' ? 'fixed' : 'absolute', left: 0, right: 0, bottom: 0, zIndex: 10000, elevation: 30, minHeight: 66, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-around', paddingTop: 7, paddingBottom: Platform.OS === 'ios' ? 12 : 5 },
+  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 1000, elevation: 30, minHeight: 66, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-around', paddingTop: 7, paddingBottom: Platform.OS === 'ios' ? 12 : 5 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   tabIconWrap: { width: 42, height: 31, borderRadius: 11, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   tabIconWrapActive: { backgroundColor: COLORS.pale },
