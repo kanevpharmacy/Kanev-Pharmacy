@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView, View, Text, TextInput, ScrollView, Pressable, Animated,
@@ -1739,6 +1740,22 @@ export default function App() {
     return <KanevAdminPortal onExit={() => { setNotice(current => ({ ...current, visible: false })); setTab('Home'); setSelectedProduct(null); }} />;
   }
 
+  const mobileTabBar = (
+      <View pointerEvents="box-none" style={[styles.tabBar, isDesktop && styles.tabBarDesktop, Platform.OS === 'web' && { position: 'fixed', left: 0, right: 0, bottom: 0, width: '100vw', zIndex: 2147483000 }]}>
+        {[
+          {name:'Home',icon:'home-outline',active:tab==='Home'&&!selectedProduct,run:()=>{setSelectedProduct(null);setTab('Home');setMobileServicesOpen(false);}},
+          {name:'Shop',icon:'grid-outline',active:tab==='Shop'&&!selectedProduct,run:()=>{openStoreShop('All');setMobileServicesOpen(false);}},
+          {name:'Services',icon:'heart-outline',active:mobileServicesOpen,badge:healthDocuments.filter(d=>(healthDocMessages[d.id]||[]).slice(-1)[0]?.sender_role==='admin'&&!(healthDocMessages[d.id]||[]).slice(-1)[0]?.read_at).length,run:()=>{if(!requireCustomerLogin())return;setMobileServicesOpen(v=>!v);}},
+          {name:'Account',icon:'person-outline',active:(tab==='Account'||tab==='Orders')&&!mobileServicesOpen,run:()=>{setSelectedProduct(null);setMobileServicesOpen(false);if(!session?.user){setAuthMode('signin');setAuthModalVisible(true);}else setTab('Account');}},
+        ].map(item=>(
+          <Pressable key={item.name} onPress={item.run} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={item.name}>
+            <View style={{position:'relative'}}><View style={[styles.tabIconWrap,item.active&&styles.tabIconWrapActive]}><Ionicons name={item.icon} size={21} color={item.active?COLORS.green:COLORS.muted}/></View>{item.badge>0?<View style={{position:'absolute',right:-9,top:-7,minWidth:19,height:19,paddingHorizontal:5,borderRadius:10,backgroundColor:'#2563EB',borderWidth:2,borderColor:'#FFFFFF',alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:9,fontWeight:'900',color:'#FFFFFF'}}>{item.badge>99?'99+':item.badge}</Text></View>:null}</View>
+            <Text style={[styles.tabLabel,item.active&&styles.tabLabelActive]}>{item.name}</Text>
+          </Pressable>
+        ))}
+      </View>
+  );
+
   return (
     <AppSafeAreaView style={styles.safe}>
       <ExpoStatusBar style="dark" />
@@ -1856,12 +1873,8 @@ export default function App() {
         {renderPage()}
         <View style={[styles.fullFooter, !isDesktop && { marginHorizontal: -14, paddingHorizontal: 16 }]} >
           <View style={styles.footerTop}>
-            <View style={styles.footerAbout}><View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.footerLogo} resizeMode="contain" /> : null}<View><Text style={styles.footerBrand}>{loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text><Text style={styles.footerTagline}>{loginBranding.tagline || 'Closer to Your Health'}</Text></View></View><Text style={styles.footerAboutCopy}>Your trusted destination for medicines, personal care, baby care and everyday wellness in Zambia.</Text><Text style={styles.footerSmall}>Product availability and dispensing are subject to pharmacy confirmation.</Text></View>
-            <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Shop</Text>{['Medicines','Personal Care','Skincare','Baby Care','Wellness','Medical Supplies'].map(label=><Pressable key={label} onPress={()=>openStoreShop(label)}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
-            <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Customer service</Text>{[['My account','Account'],['My cart','Cart'],['Browse products','Shop'],['Get help','Account']].map(([label,target])=><Pressable key={label} onPress={()=>{if(target==='Shop')openStoreShop('All');else if(target==='Account'&&!session?.user)requireCustomerLogin();else if(target==='Cart')openCustomerCart();else setTab(target);}}><Text style={styles.footerLink}>{label}</Text></Pressable>)}</View>
-            <View style={styles.footerColumn}><Text style={styles.footerColumnTitle}>Pharmacy information</Text><Text style={styles.footerLink}>{loginBranding.tagline || 'Closer to Your Health'}</Text><Text style={styles.footerLink}>Zambia · Prices in ZMW</Text><Text style={styles.footerLink}>Delivery or collection</Text><Text style={styles.footerLink}>Prescription review available</Text></View>
-          </View>
-          <View style={styles.footerBottom}><Text style={styles.footerBottomText}>© {new Date().getFullYear()} Kanev Pharmacy. All rights reserved.</Text><Text style={styles.footerBottomText}>Please use medicines responsibly and follow professional advice.</Text></View>
+            <View style={styles.footerAbout}><View style={styles.footerLogoRow}>{loginBranding.header_logo_url ? <Image loading="eager" source={{ uri: loginBranding.header_logo_url }} style={styles.foot      {Platform.OS === 'web' && typeof document !== 'undefined' ? createPortal(mobileTabBar, document.body) : mobileTabBar}
+      {!isDesktop && mobileServicesOpenstyle={styles.footerBottomText}>Please use medicines responsibly and follow professional advice.</Text></View>
         </View>
 
       </ScrollView>
