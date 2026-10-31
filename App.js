@@ -1546,24 +1546,24 @@ export default function App() {
   const CustomerOrdersPage = () => {
     if(!session?.user)return <View style={styles.formCard}><Text style={styles.accountHeading}>Sign in required</Text><Text style={styles.accountCopy}>Sign in to view and manage your orders.</Text><ActionButton title="Sign in" onPress={()=>{setAuthMode('signin');setAuthModalVisible(true);setTab('Account');}}/></View>;
     const activeCount=orders.filter(o=>!['delivered','cancelled','completed'].includes(String(o.delivery_status||o.status||'').toLowerCase())).length;
-    return <View style={{width:'100%',gap:14}}>
+    return <View style={{width:'100%',gap:10}}>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
         <Pressable onPress={()=>setTab('Account')} style={{flexDirection:'row',alignItems:'center',gap:7,paddingVertical:7}}><Ionicons name="arrow-back" size={19} color={COLORS.green}/><Text style={{fontSize:13,fontWeight:'800',color:COLORS.green}}>My account</Text></Pressable>
         <Pressable onPress={loadOrders} style={{flexDirection:'row',alignItems:'center',gap:6,paddingVertical:8,paddingHorizontal:12,borderRadius:20,backgroundColor:'#EAF5EE'}}><Ionicons name="refresh-outline" size={16} color={COLORS.green}/><Text style={{fontSize:12,fontWeight:'800',color:COLORS.green}}>Refresh</Text></Pressable>
       </View>
-      <View style={{backgroundColor:COLORS.green,borderRadius:14,padding:12,gap:5}}>
-        <Text style={{fontSize:19,fontWeight:'900',color:'#FFFFFF'}}>My Orders</Text>
-        <Text style={{fontSize:11,lineHeight:16,color:'#DCEFE4'}}>Track your pharmacy orders, check progress and review delivery updates.</Text>
-        <View style={{flexDirection:'row',gap:8,marginTop:4}}>
-          <View style={{flex:1,backgroundColor:'rgba(255,255,255,0.13)',borderRadius:9,padding:8}}><Text style={{fontSize:18,fontWeight:'900',color:'#FFFFFF'}}>{orders.length}</Text><Text style={{fontSize:11,color:'#E4F2E9'}}>Total orders</Text></View>
-          <View style={{flex:1,backgroundColor:'rgba(255,255,255,0.13)',borderRadius:9,padding:8}}><Text style={{fontSize:18,fontWeight:'900',color:'#FFFFFF'}}>{activeCount}</Text><Text style={{fontSize:11,color:'#E4F2E9'}}>In progress</Text></View>
+      <View style={{backgroundColor:COLORS.green,borderRadius:11,paddingHorizontal:13,paddingVertical:9,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
+        <Text style={{fontSize:17,fontWeight:'900',color:'#FFFFFF'}}>My Orders</Text>
+        <View style={{flexDirection:'row',alignItems:'center',gap:13}}>
+          <Text style={{fontSize:11,fontWeight:'700',color:'#E4F2E9'}}>{orders.length} total</Text>
+          <View style={{width:1,height:19,backgroundColor:'rgba(255,255,255,0.35)'}}/>
+          <Text style={{fontSize:11,fontWeight:'700',color:'#E4F2E9'}}>{activeCount} in progress</Text>
         </View>
       </View>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><Text style={{fontSize:17,fontWeight:'900',color:COLORS.ink}}>Order history</Text><Pressable onPress={()=>openStoreShop('All')}><Text style={{fontSize:12,fontWeight:'900',color:COLORS.blue}}>Shop products  →</Text></Pressable></View>
       {!orders.length?<View style={styles.myAccountEmpty}><View style={styles.myAccountEmptyIcon}><Ionicons name="cube-outline" size={27} color={COLORS.green}/></View><Text style={styles.myAccountEmptyTitle}>No orders yet</Text><Text style={styles.myAccountEmptyCopy}>Your submitted order requests will appear here with their status and tracking updates.</Text><ActionButton title="Browse products" onPress={()=>openStoreShop('All')}/></View>:orders.map(o=>{
         const isExpanded=expandedCustomerOrderId===o.id;
         const status=String(o.delivery_status||o.status||'pending').replaceAll('_',' ');
-        return <View key={o.id} style={{backgroundColor:'#FFFFFF',borderWidth:1,borderColor:COLORS.border,borderRadius:12,padding:11,gap:7}}>
+        return <View key={o.id} style={{backgroundColor:'#FFFFFF',borderWidth:1,borderColor:COLORS.border,borderRadius:10,padding:9,gap:6}}>
           <View style={{flexDirection:'row',alignItems:'flex-start',gap:10}}>
             <View style={{width:34,height:34,borderRadius:10,backgroundColor:'#EAF5EE',alignItems:'center',justifyContent:'center'}}><Ionicons name="receipt-outline" size={21} color={COLORS.green}/></View>
             <View style={{flex:1,minWidth:0,gap:4}}><Text style={{fontSize:13,fontWeight:'900',color:COLORS.ink}}>{o.order_number||'Order request'}</Text><Text style={{fontSize:11,color:COLORS.muted}}>{new Date(o.created_at).toLocaleDateString()} · {o.fulfilment||'Collection / delivery'}</Text><View style={{alignSelf:'flex-start',backgroundColor:'#EAF5EE',paddingHorizontal:9,paddingVertical:5,borderRadius:20}}><Text style={{fontSize:11,fontWeight:'900',color:COLORS.green,textTransform:'capitalize'}}>{status}</Text></View></View>
