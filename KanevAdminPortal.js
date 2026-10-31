@@ -155,8 +155,8 @@ export default function KanevAdminPortal(){
    .on('postgres_changes',{event:'*',schema:'public',table:'order_tracking_events'},()=>{if(active)loadData();})
    .on('postgres_changes',{event:'*',schema:'public',table:'customer_health_documents'},refreshDocuments)
    .on('postgres_changes',{event:'*',schema:'public',table:'customer_health_document_messages'},refreshDocuments)
-   .subscribe((status)=>{if(status==='SUBSCRIBED')refreshDocuments();});
-  const documentsPoll=setInterval(refreshDocuments,5000);
+   .subscribe();
+  const documentsPoll=setInterval(refreshDocuments,30000);
   const ordersPoll=setInterval(()=>{if(active)loadData();},15000);
   return ()=>{active=false;clearInterval(documentsPoll);clearInterval(ordersPoll);supabase.removeChannel(channel);};
  },[session?.user?.id,role]);
