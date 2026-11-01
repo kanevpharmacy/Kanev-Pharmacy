@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView, View, Text, TextInput, ScrollView, Pressable, Animated,
-  Image as NativeImage, ImageBackground, StyleSheet, StatusBar, Platform, Modal, Linking, useWindowDimensions
+  Image as NativeImage, ImageBackground, StyleSheet, StatusBar, Platform, Modal, Linking, useWindowDimensions, Appearance
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -247,6 +247,14 @@ function KanevLiveDeliveryMap({ order }) {
 }
 
 export default function App() {
+  // Kanev's storefront is intentionally light-only, regardless of device theme.
+  useEffect(() => {
+    try { Appearance.setColorScheme('light'); } catch (_) {}
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.style.colorScheme = 'light';
+      if (document.body) document.body.style.colorScheme = 'light';
+    }
+  }, []);
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isDesktop = viewportWidth >= 1024;
   const isTablet = viewportWidth >= 640 && viewportWidth < 1024;
