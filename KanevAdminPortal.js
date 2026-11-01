@@ -125,7 +125,7 @@ function AppearancePicker({label,value,onChange,kind='color'}) {
 }
 
 function LiveDriverMap({rows=[]}) {
- const pins=rows.filter(r=>r.status==='active'&&r.location&&Number.isFinite(Number(r.location.latitude))&&Number.isFinite(Number(r.location.longitude))&&Math.abs(Number(r.location.latitude))<=90&&Math.abs(Number(r.location.longitude))<=180);
+ const pins=rows.filter(r=>r.status==='active'&&r.assignment&&['picked_up','in_transit'].includes(r.assignment.status)&&r.location&&Date.now()-new Date(r.location.recorded_at||0).getTime()<=10*60*1000&&Number.isFinite(Number(r.location.latitude))&&Number.isFinite(Number(r.location.longitude))&&Math.abs(Number(r.location.latitude))<=90&&Math.abs(Number(r.location.longitude))<=180);
  const center=pins.length?[Number(pins[0].location.latitude),Number(pins[0].location.longitude)]:[-15.4167,28.2833];
  const markers=pins.map(r=>({lat:Number(r.location.latitude),lng:Number(r.location.longitude),name:String(r.full_name||'Driver').replace(/[<>&"']/g,''),order:String(r.assignment?.order?.order_number||'Active delivery').replace(/[<>&"']/g,'')}));
  const markerScript=markers.map(m=>'var p=L.marker(['+m.lat+','+m.lng+']).addTo(map).bindPopup('+JSON.stringify(m.name+' · '+m.order)+');pts.push(p.getLatLng());').join('');
@@ -988,7 +988,7 @@ if(page==='Overview')return <><View style={s.pageHead}><View><Text style={s.page
    {drivers.length?drivers.map(d=><View key={d.user_id} style={s.listRow}>
     <View style={{width:38,height:38,borderRadius:19,backgroundColor:'#EAF5EE',alignItems:'center',justifyContent:'center'}}><Ionicons name="car-outline" color={GREEN} size={19}/></View>
     <View style={{flex:1}}><Text style={s.rowTitle}>{d.full_name}</Text><Text style={s.muted}>{d.phone} · {d.status}</Text></View>
-    <Btn outline onPress={async()=>{const next=d.status==='active'?'suspended':'active';const {error:e}=await supabase.from('delivery_drivers').update({status:next,updated_at:new Date().toISOString()}).eq('user_id',d.user_id);if(e)setError(e.message);else loadDrivers();}}>{d.status==='active'?'Suspend':'Reactivate'}</Btn>
+    <Btn outline onPress={async()=>{const next=d.status==='active'?'suspended':'active';const {error:e}=await supabase.from('delivery_drivers').update({status:next,updated_at:new Date().toISOString()}).eq('user_id',d.user_id);if(e)setError(e.message);else{if(next==='suspended'){await supabase.from('delivery_driver_locations').delete().eq('driver_id',d.user_id);}await loadDrivers();}}}>{d.status==='active'?'Suspend':'Reactivate'}</Btn>
    </View>):<Empty icon="car-outline" title="No drivers registered" detail="Invite a new driver or promote an existing customer account."/>}
   </View>
     <View style={s.panel}>
