@@ -197,6 +197,9 @@ export default function App() {
   const [deliveryModalVisible, setDeliveryModalVisible] = useState(false);
   const [deliverySearch, setDeliverySearch] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState({ label: 'Zambia', latitude: null, longitude: null });
+  const [deliverySuggestions, setDeliverySuggestions] = useState([]);
+  const [deliverySearchBusy, setDeliverySearchBusy] = useState(false);
+  const deliverySearchTimer = useRef(null);
   const [locationBusy, setLocationBusy] = useState(false);
   const [category, setCategory] = useState('All');
   const [cart, setCart] = useState([]);
@@ -1003,20 +1006,18 @@ export default function App() {
         coords = { latitude: position.coords.latitude, longitude: position.coords.longitude };
       }
 
-      let label = `${approximate ? 'Approximate location' : 'Current location'} (${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)})`;
+      let label = `${approximate ? 'Approximate location' : 'Current location'}`;
       try {
-        const rows = await Location.reverseGeocodeAsync({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-        });
-        const place = rows?.[0];
-        if (place) {
-          const address = [place.name, place.street, place.subregion, place.city, place.region]
+        const response = await fetch(`https://photon.komoot.io/reverse?lat=${coords.latitude}&lon=${coords.longitude}`, { headers: { Accept: 'application/json' } });
+        if (response.ok) {
+          const result = await response.json();
+          const properties = result?.features?.[0]?.properties || {};
+          const address = [properties.name, properties.street, properties.district, properties.city, properties.county, properties.state]
             .filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join(', ');
           if (address) label = approximate ? `Approx. ${address}` : address;
         }
       } catch (_) {
-        // Keep the coordinates if reverse geocoding is unavailable.
+        // Keep a readable generic label; coordinates remain stored for delivery.
       }
 
       setDeliveryLocation({ label, latitude: coords.latitude, longitude: coords.longitude });
@@ -1035,11 +1036,40 @@ export default function App() {
       setLocationBusy(false);
     }
   };
-  const searchDeliveryOnGoogleMaps = async () => {
-    const term = deliverySearch.trim();
-    if (!term) return notify('Enter a location', 'Type an area, street, landmark or address to find it on Google Maps.', 'warning');
-    try { await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(term)}`); }
-    catch (_) { notify('Google Maps unavailable', 'Please search Google Maps in your browser, then enter the selected address here.', 'warning'); }
+  const handleDeliverySearchChange = (value) => {
+    setDeliverySearch(value);
+    setDeliveryLocation(current => ({ ...current, label: value, latitude: null, longitude: null }));
+    setDeliverySuggestions([]);
+    if (deliverySearchTimer.current) clearTimeout(deliverySearchTimer.current);
+    const term = value.trim();
+    if (term.length < 3) { setDeliverySearchBusy(false); return; }
+    deliverySearchTimer.current = setTimeout(async () => {
+      setDeliverySearchBusy(true);
+      try {
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(term)}&lat=-15.4167&lon=28.2833&limit=7&lang=en`;
+        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error('Location search unavailable');
+        const data = await response.json();
+        setDeliverySuggestions(Array.isArray(data.features) ? data.features : []);
+      } catch (_) {
+        setDeliverySuggestions([]);
+      } finally {
+        setDeliverySearchBusy(false);
+      }
+    }, 350);
+  };
+  const selectDeliverySuggestion = (feature) => {
+    const properties = feature?.properties || {};
+    const coordinates = feature?.geometry?.coordinates || [];
+    const longitude = Number(coordinates[0]);
+    const latitude = Number(coordinates[1]);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    const label = [properties.name, properties.street, properties.district, properties.city, properties.county, properties.state]
+      .filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join(', ');
+    if (!label) return;
+    setDeliverySearch(label);
+    setDeliveryLocation({ label, latitude, longitude });
+    setDeliverySuggestions([]);
   };
   const saveDeliveryLocation = () => {
     const label = deliverySearch.trim();
@@ -1946,12 +1976,15 @@ export default function App() {
         <View style={styles.deliveryModalOverlay}>
           <Pressable style={styles.authModalBackdrop} onPress={() => setDeliveryModalVisible(false)} accessibilityLabel="Close delivery location dialog" />
           <View style={styles.deliveryModalCard}>
-            <View style={styles.deliveryModalHeader}><View style={styles.deliveryModalIcon}><Ionicons name="location" size={23} color={COLORS.green}/></View><View style={{flex:1}}><Text style={styles.deliveryModalTitle}>Choose delivery location</Text><Text style={styles.deliveryModalSub}>Find your address on Google Maps or use your current location.</Text></View><Pressable onPress={() => setDeliveryModalVisible(false)}><Ionicons name="close" size={23} color={COLORS.ink}/></Pressable></View>
+            <View style={styles.deliveryModalHeader}><View style={styles.deliveryModalIcon}><Ionicons name="location" size={23} color={COLORS.green}/></View><View style={{flex:1}}><Text style={styles.deliveryModalTitle}>Choose delivery location</Text><Text style={styles.deliveryModalSub}>Search for an area, road or landmark in Zambia, or use your current location.</Text></View><Pressable onPress={() => setDeliveryModalVisible(false)}><Ionicons name="close" size={23} color={COLORS.ink}/></Pressable></View>
             <Text style={styles.fieldLabel}>Area, street, landmark or address</Text>
-            <TextInput value={deliverySearch} onChangeText={setDeliverySearch} placeholder="e.g. Kabulonga, Lusaka" placeholderTextColor={COLORS.muted} style={styles.fieldInput}/>
-            <Pressable style={styles.deliveryMapButton} onPress={searchDeliveryOnGoogleMaps}><Ionicons name="map-outline" size={19} color={COLORS.blue}/><Text style={styles.deliveryMapButtonText}>Find on Google Maps</Text><Ionicons name="open-outline" size={16} color={COLORS.blue}/></Pressable>
+            <TextInput value={deliverySearch} onChangeText={handleDeliverySearchChange} placeholder="e.g. Kabulonga, Lusaka" placeholderTextColor={COLORS.muted} style={styles.fieldInput}/>
+            {deliverySearchBusy ? <Text style={styles.deliveryModalHint}>Searching nearby places…</Text> : null}
+            {deliverySuggestions.length > 0 ? <View style={{maxHeight:190,borderWidth:1,borderColor:COLORS.border,borderRadius:12,marginTop:7,marginBottom:8,overflow:'hidden'}}>
+              {deliverySuggestions.map((feature,index)=>{const p=feature.properties||{};const label=[p.name,p.street,p.district,p.city,p.county,p.state].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(', ');return <Pressable key={feature.properties?.osm_id||index} onPress={()=>selectDeliverySuggestion(feature)} style={{paddingHorizontal:12,paddingVertical:11,borderBottomWidth:index===deliverySuggestions.length-1?0:1,borderBottomColor:COLORS.border,flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="location-outline" size={17} color={COLORS.green}/><Text numberOfLines={2} style={{flex:1,fontSize:12,color:COLORS.ink}}>{label}</Text></Pressable>;})}
+            </View> : null}
             <Pressable style={styles.deliveryCurrentButton} onPress={useCurrentDeliveryLocation} disabled={locationBusy}><Ionicons name="navigate-outline" size={19} color={COLORS.green}/><Text style={styles.deliveryCurrentText}>{locationBusy ? 'Getting your location…' : 'Use my current location'}</Text></Pressable>
-            <Text style={styles.deliveryModalHint}>Google Maps opens separately. Enter or adjust the chosen address here, then save it for checkout.</Text>
+            <Text style={styles.deliveryModalHint}>Choose a search result or use your GPS location. Add a nearby landmark or delivery instructions at checkout if needed.</Text>
             <View style={styles.deliveryModalActions}><Pressable style={styles.deliveryCancelButton} onPress={() => setDeliveryModalVisible(false)}><Text style={styles.deliveryCancelText}>Cancel</Text></Pressable><Pressable style={styles.deliverySaveButton} onPress={saveDeliveryLocation}><Text style={styles.deliverySaveText}>Save location</Text></Pressable></View>
           </View>
         </View>
