@@ -36,23 +36,56 @@ Deno.serve(async (req) => {
   if (!fullName || fullName.length > 120) return json({ error: "Driver name is required (maximum 120 characters)" }, 400);
   if (!phone || phone.length > 40) return json({ error: "Driver phone number is required" }, 400);
 
-  // Send the invite back to the deployed Kanev app so Supabase can establish
-  // the driver's session on the same domain that handles the app login.
-  const inviteRedirectTo = Deno.env.get("DRIVER_INVITE_REDIRECT_URL") || "https://kanev-pharmacy.vercel.app/";
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: inviteRedirectTo,
-    data: { full_name: fullName, kanev_account_type: "delivery_driver" },
-  });
-  if (inviteError || !invited.user) {
-    return json({ error: inviteError?.message || "Could not send the driver invitation" }, 400);
+  const redirectTo = Deno.env.get("DRIVER_INVITE_REDIRECT_URL") || "https://kanev-pharmacy.vercel.app/";
+  // Reuse an existing Auth identity when an earlier invitation was accepted
+  // by Auth but its one-time link expired before the driver finished setup.
+  let existingUser: { id: string; email?: string } | null = null;
+  for (let page = 1; page <= 10; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) return json({ error: "Could not check existing account: " + error.message }, 500);
+    const match = data.users.find((candidate) => candidate.email?.toLowerCase() === email);
+    if (match) { existingUser = { id: match.id, email: match.email }; break; }
+    if (data.users.length < 1000) break;
   }
 
-  const { error: profileError } = await admin.from("delivery_drivers").upsert({
-    user_id: invited.user.id, full_name: fullName, phone, status: "active", created_by: user.id,
-  });
-  if (profileError) {
-    await admin.auth.admin.deleteUser(invited.user.id);
-    return json({ error: "Invitation could not be registered: " + profileError.message }, 500);
+  let driverUserId: string;
+  let deliveryMethod: "invitation" | "password_reset";
+  if (existingUser) {
+    driverUserId = existingUser.id;
+    const { error: profileError } = await admin.from("delivery_drivers").upsert({
+      user_id: driverUserId, full_name: fullName, phone, status: "active", created_by: user.id,
+    }, { onConflict: "user_id" });
+    if (profileError) return json({ error: "Existing account found, but driver access could not be updated: " + profileError.message }, 500);
+
+    const recoveryClient = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { error: recoveryError } = await recoveryClient.auth.resetPasswordForEmail(email, { redirectTo });
+    if (recoveryError) return json({ error: "Driver access was prepared, but the password setup email could not be sent: " + recoveryError.message }, 400);
+    deliveryMethod = "password_reset";
+  } else {
+    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo,
+      data: { full_name: fullName, kanev_account_type: "delivery_driver" },
+    });
+    if (inviteError || !invited.user) {
+      return json({ error: inviteError?.message || "Could not send the driver invitation" }, 400);
+    }
+    driverUserId = invited.user.id;
+    const { error: profileError } = await admin.from("delivery_drivers").upsert({
+      user_id: driverUserId, full_name: fullName, phone, status: "active", created_by: user.id,
+    }, { onConflict: "user_id" });
+    if (profileError) {
+      await admin.auth.admin.deleteUser(driverUserId);
+      return json({ error: "Invitation could not be registered: " + profileError.message }, 500);
+    }
+    deliveryMethod = "invitation";
   }
-  return json({ success: true, driver: { user_id: invited.user.id, email, full_name: fullName, phone, status: "active" } });
+
+  return json({
+    success: true,
+    delivery_method: deliveryMethod,
+    message: deliveryMethod === "password_reset"
+      ? "This email already has a Kanev account. A fresh password setup link has been sent."
+      : "Driver invitation sent.",
+    driver: { user_id: driverUserId, email, full_name: fullName, phone, status: "active" },
+  });
 });
