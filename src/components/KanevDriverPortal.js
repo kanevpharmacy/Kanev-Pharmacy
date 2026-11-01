@@ -73,17 +73,18 @@ export default function KanevDriverPortal({session,onSignOut}){
     sending=true;setGpsStatus('GPS fix received; saving location…');
     try{
      const c=position.coords;
-     if(Number.isFinite(c.accuracy)&&c.accuracy>50){setGpsStatus('GPS accuracy is low ('+Math.round(c.accuracy)+' m). Waiting for a better signal…');return;}
+     // Never block delivery tracking on a strict accuracy threshold. Share the
+     // best available fix immediately and report its estimated accuracy.
      setDriverPosition({latitude:c.latitude,longitude:c.longitude,accuracy:c.accuracy});
      const {error:e}=await supabase.from('delivery_driver_locations').upsert({
       driver_id:session.user.id,assignment_id:job.id,latitude:c.latitude,longitude:c.longitude,
       heading:c.heading,speed_mps:c.speed,accuracy_m:c.accuracy,recorded_at:new Date().toISOString()
      },{onConflict:'driver_id'});
      if(e){console.warn('Driver location update failed',e.message);setGpsStatus('Location upload failed: '+e.message);return;}
-     setLastGpsSent(new Date());setGpsStatus('Location shared successfully');
+     setLastGpsSent(new Date());setGpsStatus('Location shared · estimated accuracy '+(Number.isFinite(c.accuracy)?Math.round(c.accuracy)+' m':'not reported'));
     }finally{sending=false;}
    };
-   const getAndSend=async()=>{try{setGpsStatus('Requesting current GPS position…');const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.High});await send(position);}catch(e){console.warn('Driver GPS heartbeat failed',e?.message||e);setGpsStatus('GPS error: '+(e?.message||'Could not get current position'));}};
+   const getAndSend=async()=>{try{setGpsStatus('Requesting current GPS position…');const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});await send(position);}catch(e){console.warn('Driver GPS heartbeat failed',e?.message||e);setGpsStatus('GPS error: '+(e?.message||'Could not get current position'));}};
    await getAndSend();
    watchRef.current=await Location.watchPositionAsync({accuracy:Location.Accuracy.High,timeInterval:5000,distanceInterval:5},send);
    // A 30-second heartbeat also refreshes the timestamp when the driver is stationary.
