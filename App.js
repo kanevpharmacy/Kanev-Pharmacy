@@ -1075,7 +1075,7 @@ export default function App() {
   };
   const handleDeliveryMapMessage = async (event) => {
     try {
-      const payload = JSON.parse(event?.nativeEvent?.data || '{}');
+      const payload = JSON.parse(event?.nativeEvent?.data || event?.data || '{}');
       const latitude = Number(payload.latitude);
       const longitude = Number(payload.longitude);
       if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
@@ -1098,6 +1098,16 @@ export default function App() {
       setMapPinBusy(false);
     }
   };
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !deliveryModalVisible || typeof window === 'undefined') return undefined;
+    const receiveMapPin = (event) => {
+      if (event?.data && typeof event.data === 'string' && event.data.includes('"latitude"')) {
+        handleDeliveryMapMessage({ data: event.data });
+      }
+    };
+    window.addEventListener('message', receiveMapPin);
+    return () => window.removeEventListener('message', receiveMapPin);
+  }, [deliveryModalVisible]);
   const deliveryMapLatitude = Number.isFinite(Number(deliveryLocation.latitude)) ? Number(deliveryLocation.latitude) : -15.4167;
   const deliveryMapLongitude = Number.isFinite(Number(deliveryLocation.longitude)) ? Number(deliveryLocation.longitude) : 28.2833;
   const deliveryMapHtml = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;width:100%;margin:0;padding:0;background:#edf3ef}.leaflet-control-attribution{font-size:9px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><script>
@@ -1105,7 +1115,7 @@ export default function App() {
     const map=L.map('map',{zoomControl:true,attributionControl:true}).setView(start,${deliveryLocation.latitude != null ? 16 : 12});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
     const pin=L.marker(start,{draggable:true}).addTo(map);
-    function report(){const p=pin.getLatLng();window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({latitude:p.lat,longitude:p.lng}));}
+    function report(){const p=pin.getLatLng();const data=JSON.stringify({latitude:p.lat,longitude:p.lng});if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(data);}else{window.parent.postMessage(data,'*');}}
     pin.on('dragend',report);
     map.on('click',function(e){pin.setLatLng(e.latlng);report();});
     setTimeout(()=>map.invalidateSize(),250);
@@ -2023,7 +2033,9 @@ export default function App() {
               {deliverySuggestions.map((feature,index)=>{const p=feature.properties||{};const label=[p.name,p.street,p.district,p.city,p.county,p.state].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(', ');return <Pressable key={feature.properties?.osm_id||index} onPress={()=>selectDeliverySuggestion(feature)} style={{paddingHorizontal:12,paddingVertical:10,borderBottomWidth:index===deliverySuggestions.length-1?0:1,borderBottomColor:COLORS.border,flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="location-outline" size={17} color={COLORS.green}/><Text numberOfLines={2} style={{flex:1,fontSize:12,color:COLORS.ink}}>{label}</Text></Pressable>;})}
             </View> : null}
             <View style={{height:245,marginTop:10,borderRadius:14,overflow:'hidden',borderWidth:1,borderColor:COLORS.border}}>
-              <WebView key={'delivery-map-'+deliveryMapLatitude.toFixed(5)+'-'+deliveryMapLongitude.toFixed(5)} ref={deliveryMapRef} source={{html:deliveryMapHtml}} originWhitelist={['*']} javaScriptEnabled domStorageEnabled onMessage={handleDeliveryMapMessage} style={{flex:1,backgroundColor:'#EDF3EF'}} />
+              {Platform.OS === 'web'
+                ? React.createElement('iframe', { key: 'delivery-map-'+deliveryMapLatitude.toFixed(5)+'-'+deliveryMapLongitude.toFixed(5), title: 'Select delivery location', srcDoc: deliveryMapHtml, style: { width: '100%', height: '100%', border: 0, display: 'block' }, referrerPolicy: 'no-referrer' })
+                : <WebView key={'delivery-map-'+deliveryMapLatitude.toFixed(5)+'-'+deliveryMapLongitude.toFixed(5)} ref={deliveryMapRef} source={{html:deliveryMapHtml}} originWhitelist={['*']} javaScriptEnabled domStorageEnabled onMessage={handleDeliveryMapMessage} style={{flex:1,backgroundColor:'#EDF3EF'}} />}
               <View pointerEvents="none" style={{position:'absolute',top:9,left:9,right:9,alignItems:'center'}}><View style={{backgroundColor:'#FFFFFF',paddingHorizontal:11,paddingVertical:7,borderRadius:18,elevation:4}}><Text style={{fontSize:10,fontWeight:'800',color:COLORS.green}}>Drag the pin or tap the map to set your exact location</Text></View></View>
             </View>
             {mapPinBusy ? <Text style={styles.deliveryModalHint}>Finding the address for your pin…</Text> : deliveryLocation.latitude != null ? <Text style={styles.deliveryModalHint}>Pin selected: {deliveryLocation.label}</Text> : <Text style={styles.deliveryModalHint}>Move the pin to your property or tap the map. You can zoom in for a more precise position.</Text>}
