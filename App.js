@@ -282,6 +282,12 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [driverAccess, setDriverAccess] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryPassword, setRecoveryPassword] = useState('');
+  const [recoveryPasswordConfirm, setRecoveryPasswordConfirm] = useState('');
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryError, setRecoveryError] = useState('');
+  const [recoverySuccess, setRecoverySuccess] = useState('');
   const [authMode, setAuthMode] = useState('signin');
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
@@ -568,6 +574,7 @@ export default function App() {
           const code = params.get('code');
           const tokenHash = params.get('token_hash') || hashParams.get('token_hash');
           const inviteType = params.get('type') || hashParams.get('type');
+          if (inviteType === 'recovery') setRecoveryMode(true);
           if (code) {
             const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
             if (exchangeError) console.warn('[Kanev invite] Code exchange failed:', exchangeError.message);
@@ -608,8 +615,13 @@ export default function App() {
       }
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true);
+        setRecoveryError('');
+        setRecoverySuccess('');
+      }
       setSession(nextSession);
       if (!nextSession) {
         setOrders([]);
@@ -1912,6 +1924,52 @@ export default function App() {
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
         {(loginBranding.loading_logo_url || loginBranding.header_logo_url || cachedStartupLogoUrl) ? <Image loading="eager" source={{ uri: loginBranding.loading_logo_url || loginBranding.header_logo_url || cachedStartupLogoUrl }} resizeMode="contain" style={{ width: 132, height: 132 }} /> : null}
         <Text style={styles.brandName}>{footerConfig.brand_title || loginBranding.pharmacy_title || 'Kanev Pharmacy'}</Text>
+      </AppSafeAreaView>
+    );
+  }
+
+  // Password-recovery links for previously invited drivers must finish here
+  // before the authenticated account is allowed into the Driver Portal.
+  if (recoveryMode) {
+    const saveRecoveredPassword = async () => {
+      setRecoveryError('');
+      setRecoverySuccess('');
+      if (!session?.user) { setRecoveryError('This password setup link is no longer active. Request a fresh link from the Kanev administrator.'); return; }
+      if (recoveryPassword.length < 8) { setRecoveryError('Choose a password with at least 8 characters.'); return; }
+      if (recoveryPassword !== recoveryPasswordConfirm) { setRecoveryError('The passwords do not match.'); return; }
+      setRecoveryBusy(true);
+      try {
+        const { error } = await supabase.auth.updateUser({ password: recoveryPassword });
+        if (error) throw error;
+        setRecoverySuccess('Your password has been saved. You can now access your driver account.');
+        setRecoveryPassword('');
+        setRecoveryPasswordConfirm('');
+        setRecoveryMode(false);
+      } catch (error) {
+        setRecoveryError(error?.message || 'We could not update your password. Please request a new setup link.');
+      } finally { setRecoveryBusy(false); }
+    };
+    return (
+      <AppSafeAreaView style={[styles.safe, { flex: 1, justifyContent: 'center', padding: 22, backgroundColor: '#F4F8F5' }]}>
+        <ExpoStatusBar style="dark" />
+        <View style={{ width: '100%', maxWidth: 440, alignSelf: 'center', backgroundColor: '#FFFFFF', borderRadius: 22, padding: 24, borderWidth: 1, borderColor: '#DCE8E1' }}>
+          <View style={{ width: 54, height: 54, borderRadius: 16, backgroundColor: '#EAF5EE', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+            <Ionicons name="lock-closed-outline" size={25} color="#064E3B" />
+          </View>
+          <Text style={{ color: '#064E3B', fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }}>KANEV PHARMACY · DRIVER ACCOUNT</Text>
+          <Text style={{ color: '#172B24', fontSize: 24, fontWeight: '900', marginTop: 8 }}>Set your password</Text>
+          <Text style={{ color: '#687A72', fontSize: 13, lineHeight: 20, marginTop: 8 }}>Create a secure password to finish setting up your driver account.</Text>
+          <Text style={{ color: '#172B24', fontSize: 12, fontWeight: '800', marginTop: 20, marginBottom: 7 }}>New password</Text>
+          <TextInput value={recoveryPassword} onChangeText={setRecoveryPassword} secureTextEntry autoCapitalize="none" placeholder="At least 8 characters" style={{ minHeight: 48, borderWidth: 1, borderColor: '#DCE8E1', borderRadius: 11, paddingHorizontal: 13, color: '#172B24' }} />
+          <Text style={{ color: '#172B24', fontSize: 12, fontWeight: '800', marginTop: 14, marginBottom: 7 }}>Confirm password</Text>
+          <TextInput value={recoveryPasswordConfirm} onChangeText={setRecoveryPasswordConfirm} secureTextEntry autoCapitalize="none" placeholder="Enter the password again" style={{ minHeight: 48, borderWidth: 1, borderColor: '#DCE8E1', borderRadius: 11, paddingHorizontal: 13, color: '#172B24' }} />
+          {recoveryError ? <Text style={{ color: '#B42318', fontSize: 12, lineHeight: 18, marginTop: 12 }}>{recoveryError}</Text> : null}
+          {recoverySuccess ? <Text style={{ color: '#067647', fontSize: 12, lineHeight: 18, marginTop: 12 }}>{recoverySuccess}</Text> : null}
+          <Pressable onPress={saveRecoveredPassword} disabled={recoveryBusy} style={{ minHeight: 49, borderRadius: 12, backgroundColor: recoveryBusy ? '#7FA99A' : '#064E3B', alignItems: 'center', justifyContent: 'center', marginTop: 20 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900' }}>{recoveryBusy ? 'Saving password…' : 'Save password and continue'}</Text>
+          </Pressable>
+          <Text style={{ color: '#84948C', fontSize: 10, textAlign: 'center', marginTop: 15 }}>Closer to Your Health</Text>
+        </View>
       </AppSafeAreaView>
     );
   }
