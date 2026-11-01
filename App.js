@@ -200,6 +200,8 @@ export default function App() {
   const [deliverySuggestions, setDeliverySuggestions] = useState([]);
   const [deliverySearchBusy, setDeliverySearchBusy] = useState(false);
   const deliverySearchTimer = useRef(null);
+  const deliveryMapRef = useRef(null);
+  const [mapPinBusy, setMapPinBusy] = useState(false);
   const [locationBusy, setLocationBusy] = useState(false);
   const [category, setCategory] = useState('All');
   const [cart, setCart] = useState([]);
@@ -1071,6 +1073,43 @@ export default function App() {
     setDeliveryLocation({ label, latitude, longitude });
     setDeliverySuggestions([]);
   };
+  const handleDeliveryMapMessage = async (event) => {
+    try {
+      const payload = JSON.parse(event?.nativeEvent?.data || '{}');
+      const latitude = Number(payload.latitude);
+      const longitude = Number(payload.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+      setMapPinBusy(true);
+      let label = `Pinned location near ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+      try {
+        const response = await fetch(`https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}`, { headers: { Accept: 'application/json' } });
+        if (response.ok) {
+          const data = await response.json();
+          const p = data?.features?.[0]?.properties || {};
+          const readable = [p.name, p.street, p.district, p.city, p.county, p.state]
+            .filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join(', ');
+          if (readable) label = readable;
+        }
+      } catch (_) {}
+      setDeliveryLocation({ label, latitude, longitude });
+      setDeliverySearch(label);
+      setDeliverySuggestions([]);
+    } finally {
+      setMapPinBusy(false);
+    }
+  };
+  const deliveryMapLatitude = Number.isFinite(Number(deliveryLocation.latitude)) ? Number(deliveryLocation.latitude) : -15.4167;
+  const deliveryMapLongitude = Number.isFinite(Number(deliveryLocation.longitude)) ? Number(deliveryLocation.longitude) : 28.2833;
+  const deliveryMapHtml = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;width:100%;margin:0;padding:0;background:#edf3ef}.leaflet-control-attribution{font-size:9px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><script>
+    const start=[${deliveryMapLatitude},${deliveryMapLongitude}];
+    const map=L.map('map',{zoomControl:true,attributionControl:true}).setView(start,${deliveryLocation.latitude != null ? 16 : 12});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+    const pin=L.marker(start,{draggable:true}).addTo(map);
+    function report(){const p=pin.getLatLng();window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({latitude:p.lat,longitude:p.lng}));}
+    pin.on('dragend',report);
+    map.on('click',function(e){pin.setLatLng(e.latlng);report();});
+    setTimeout(()=>map.invalidateSize(),250);
+  <\/script></body></html>`;
   const saveDeliveryLocation = () => {
     const label = deliverySearch.trim();
     if (!label) return notify('Delivery address required', 'Enter or choose a delivery location before saving.', 'warning');
@@ -1980,11 +2019,16 @@ export default function App() {
             <Text style={styles.fieldLabel}>Area, street, landmark or address</Text>
             <TextInput value={deliverySearch} onChangeText={handleDeliverySearchChange} placeholder="e.g. Kabulonga, Lusaka" placeholderTextColor={COLORS.muted} style={styles.fieldInput}/>
             {deliverySearchBusy ? <Text style={styles.deliveryModalHint}>Searching nearby places…</Text> : null}
-            {deliverySuggestions.length > 0 ? <View style={{maxHeight:190,borderWidth:1,borderColor:COLORS.border,borderRadius:12,marginTop:7,marginBottom:8,overflow:'hidden'}}>
-              {deliverySuggestions.map((feature,index)=>{const p=feature.properties||{};const label=[p.name,p.street,p.district,p.city,p.county,p.state].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(', ');return <Pressable key={feature.properties?.osm_id||index} onPress={()=>selectDeliverySuggestion(feature)} style={{paddingHorizontal:12,paddingVertical:11,borderBottomWidth:index===deliverySuggestions.length-1?0:1,borderBottomColor:COLORS.border,flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="location-outline" size={17} color={COLORS.green}/><Text numberOfLines={2} style={{flex:1,fontSize:12,color:COLORS.ink}}>{label}</Text></Pressable>;})}
+            {deliverySuggestions.length > 0 ? <View style={{maxHeight:145,borderWidth:1,borderColor:COLORS.border,borderRadius:12,marginTop:7,marginBottom:8,overflow:'hidden'}}>
+              {deliverySuggestions.map((feature,index)=>{const p=feature.properties||{};const label=[p.name,p.street,p.district,p.city,p.county,p.state].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(', ');return <Pressable key={feature.properties?.osm_id||index} onPress={()=>selectDeliverySuggestion(feature)} style={{paddingHorizontal:12,paddingVertical:10,borderBottomWidth:index===deliverySuggestions.length-1?0:1,borderBottomColor:COLORS.border,flexDirection:'row',alignItems:'center',gap:9}}><Ionicons name="location-outline" size={17} color={COLORS.green}/><Text numberOfLines={2} style={{flex:1,fontSize:12,color:COLORS.ink}}>{label}</Text></Pressable>;})}
             </View> : null}
+            <View style={{height:245,marginTop:10,borderRadius:14,overflow:'hidden',borderWidth:1,borderColor:COLORS.border}}>
+              <WebView key={'delivery-map-'+deliveryMapLatitude.toFixed(5)+'-'+deliveryMapLongitude.toFixed(5)} ref={deliveryMapRef} source={{html:deliveryMapHtml}} originWhitelist={['*']} javaScriptEnabled domStorageEnabled onMessage={handleDeliveryMapMessage} style={{flex:1,backgroundColor:'#EDF3EF'}} />
+              <View pointerEvents="none" style={{position:'absolute',top:9,left:9,right:9,alignItems:'center'}}><View style={{backgroundColor:'#FFFFFF',paddingHorizontal:11,paddingVertical:7,borderRadius:18,elevation:4}}><Text style={{fontSize:10,fontWeight:'800',color:COLORS.green}}>Drag the pin or tap the map to set your exact location</Text></View></View>
+            </View>
+            {mapPinBusy ? <Text style={styles.deliveryModalHint}>Finding the address for your pin…</Text> : deliveryLocation.latitude != null ? <Text style={styles.deliveryModalHint}>Pin selected: {deliveryLocation.label}</Text> : <Text style={styles.deliveryModalHint}>Move the pin to your property or tap the map. You can zoom in for a more precise position.</Text>}
             <Pressable style={styles.deliveryCurrentButton} onPress={useCurrentDeliveryLocation} disabled={locationBusy}><Ionicons name="navigate-outline" size={19} color={COLORS.green}/><Text style={styles.deliveryCurrentText}>{locationBusy ? 'Getting your location…' : 'Use my current location'}</Text></Pressable>
-            <Text style={styles.deliveryModalHint}>Choose a search result or use your GPS location. Add a nearby landmark or delivery instructions at checkout if needed.</Text>
+            <Text style={styles.deliveryModalHint}>Your selected address and exact map coordinates will be saved for delivery. Add a nearby landmark or directions at checkout if needed.</Text>
             <View style={styles.deliveryModalActions}><Pressable style={styles.deliveryCancelButton} onPress={() => setDeliveryModalVisible(false)}><Text style={styles.deliveryCancelText}>Cancel</Text></Pressable><Pressable style={styles.deliverySaveButton} onPress={saveDeliveryLocation}><Text style={styles.deliverySaveText}>Save location</Text></Pressable></View>
           </View>
         </View>
