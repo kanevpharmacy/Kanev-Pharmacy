@@ -8,6 +8,16 @@ import { startDriverBackgroundLocation, stopDriverBackgroundLocation, getDriverB
 const GREEN='#064E3B', INK='#172B24', MUTED='#687A72', LINE='#DCE8E1';
 const labelStatus=s=>String(s||'assigned').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 
+function DriverNavigationMap({position,destination,address}) {
+ const valid=(p)=>p&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude))&&Math.abs(Number(p.latitude))<=90&&Math.abs(Number(p.longitude))<=180;
+ const hasStart=valid(position),hasEnd=valid(destination);
+ const start=hasStart?[Number(position.latitude),Number(position.longitude)]:[-15.4167,28.2833];
+ const end=hasEnd?[Number(destination.latitude),Number(destination.longitude)]:null;
+ const routeScript=hasEnd&&hasStart?'fetch("https://router.project-osrm.org/route/v1/driving/'+start[1]+','+start[0]+';'+end[1]+','+end[0]+'?overview=full&geometries=geojson").then(r=>r.json()).then(d=>{if(d.routes&&d.routes[0]){var line=L.geoJSON(d.routes[0].geometry,{style:{color:"#087F5B",weight:6,opacity:.9}}).addTo(map);map.fitBounds(line.getBounds().pad(.16));}}).catch(()=>{});':'';
+ const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;margin:0;background:#edf3ef}.driver{background:#087F5B;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 8px #064e3b88}.destination{background:#D97706;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 8px #78350f66}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>var map=L.map("map").setView(['+start[0]+','+start[1]+'], '+(hasStart?15:11)+');L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);'+(hasStart?'L.marker(['+start[0]+','+start[1]+'],{icon:L.divIcon({className:"",html:"<div class=\\"driver\\"></div>",iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map).bindPopup("Your current position");':'')+(hasEnd?'L.marker(['+end[0]+','+end[1]+'],{icon:L.divIcon({className:"",html:"<div class=\\"destination\\"></div>",iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map).bindPopup("Customer destination");':'')+routeScript+'</script></body></html>';
+ return <View style={{height:260,borderRadius:12,overflow:'hidden',backgroundColor:'#EDF3EF'}}>{Platform.OS==='web'?React.createElement('iframe',{title:'Route to customer',srcDoc:html,style:{width:'100%',height:'100%',border:0,display:'block'}}):<WebView originWhitelist={['*']} source={{html}} javaScriptEnabled domStorageEnabled style={{flex:1}}/>}</View>;
+}
+
 export default function KanevDriverPortal({session,onSignOut}){
  const [driver,setDriver]=useState(null),[jobs,setJobs]=useState([]),[busy,setBusy]=useState(false),[trackingId,setTrackingId]=useState(null),[error,setError]=useState('');
  const watchRef=useRef(null);
@@ -16,6 +26,7 @@ export default function KanevDriverPortal({session,onSignOut}){
  const [backgroundEnabled,setBackgroundEnabled]=useState(false);
  const [gpsStatus,setGpsStatus]=useState('Waiting for GPS fix…');
  const [lastGpsSent,setLastGpsSent]=useState(null);
+ const [driverPosition,setDriverPosition]=useState(null);
  const load=useCallback(async()=>{
   if(!session?.user?.id)return;
   setBusy(true);setError('');
@@ -48,6 +59,7 @@ export default function KanevDriverPortal({session,onSignOut}){
     sending=true;setGpsStatus('GPS fix received; saving location…');
     try{
      const c=position.coords;
+     setDriverPosition({latitude:c.latitude,longitude:c.longitude});
      const {error:e}=await supabase.from('delivery_driver_locations').upsert({
       driver_id:session.user.id,assignment_id:job.id,latitude:c.latitude,longitude:c.longitude,
       heading:c.heading,speed_mps:c.speed,accuracy_m:c.accuracy,recorded_at:new Date().toISOString()
@@ -109,7 +121,7 @@ export default function KanevDriverPortal({session,onSignOut}){
     <Text style={{fontSize:12,color:MUTED}}>Order total: K{Number(job.order?.total_zmw||0).toFixed(2)}</Text>
     {job.status==='assigned'?<Pressable onPress={()=>update(job,'accepted')} style={{backgroundColor:GREEN,padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Accept delivery</Text></Pressable>:null}
     {job.status==='accepted'?<Pressable onPress={()=>update(job,'picked_up')} style={{backgroundColor:GREEN,padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Picked up — start route</Text></Pressable>:null}
-    {['picked_up','in_transit'].includes(job.status)?<><View style={{backgroundColor:'#EAF5EE',padding:10,borderRadius:9,flexDirection:'row',alignItems:'center',gap:7}}><Ionicons name="radio-button-on" color={GREEN}/><Text style={{color:GREEN,fontSize:12,fontWeight:'800'}}>{trackingId===job.id?(backgroundEnabled?'Background GPS tracking active':'Foreground GPS tracking active'):'Delivery in progress'}</Text></View>{trackingId===job.id?<Text style={{fontSize:11,color:gpsStatus.includes('failed')||gpsStatus.includes('error')?'#B42318':MUTED}}>{gpsStatus}{lastGpsSent?' · Last sent '+lastGpsSent.toLocaleTimeString():''}</Text>:null}<Pressable onPress={()=>update(job,'delivered')} style={{backgroundColor:'#176B45',padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Mark as delivered</Text></Pressable></>:null}
+    {['picked_up','in_transit'].includes(job.status)?<><Text style={{fontSize:13,fontWeight:'900',color:INK}}>Route to customer</Text><DriverNavigationMap position={driverPosition} destination={{latitude:job.order?.delivery_latitude,longitude:job.order?.delivery_longitude}} address={job.order?.delivery_address}/><Pressable onPress={()=>{const dest=job.order?.delivery_latitude&&job.order?.delivery_longitude?job.order.delivery_latitude+','+job.order.delivery_longitude:job.order?.delivery_address||'';if(dest)Linking.openURL('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest)+'&travelmode=driving');}} style={{backgroundColor:'#EAF5EE',padding:11,borderRadius:10,alignItems:'center'}}><Text style={{color:GREEN,fontWeight:'900'}}>Open turn-by-turn navigation in Google Maps</Text></Pressable><View style={{backgroundColor:'#EAF5EE',padding:10,borderRadius:9,flexDirection:'row',alignItems:'center',gap:7}}><Ionicons name="radio-button-on" color={GREEN}/><Text style={{color:GREEN,fontSize:12,fontWeight:'800'}}>{trackingId===job.id?(backgroundEnabled?'Background GPS tracking active':'Foreground GPS tracking active'):'Delivery in progress'}</Text></View>{trackingId===job.id?<Text style={{fontSize:11,color:gpsStatus.includes('failed')||gpsStatus.includes('error')?'#B42318':MUTED}}>{gpsStatus}{lastGpsSent?' · Last sent '+lastGpsSent.toLocaleTimeString():''}</Text>:null}<Pressable onPress={()=>update(job,'delivered')} style={{backgroundColor:'#176B45',padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Mark as delivered</Text></Pressable></>:null}
    </View>)}
   </ScrollView>
  </View>;
