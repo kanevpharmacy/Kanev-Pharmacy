@@ -17,7 +17,7 @@ export default function KanevDriverPortal({session,onSignOut}){
   setBusy(true);setError('');
   try{
    const {data:d,error:de}=await supabase.from('delivery_drivers').select('*').eq('user_id',session.user.id).maybeSingle();
-   if(de)throw de;if(!d||d.status!=='active'){await stopDriverBackgroundLocation();throw new Error('This account does not have active delivery-driver access.');}
+   if(de)throw de;if(!d||d.status!=='active'){try{await watchRef.current?.remove?.();}catch(_){}watchRef.current=null;setTrackingId(null);setBackgroundEnabled(false);await stopDriverBackgroundLocation();throw new Error('This account does not have active delivery-driver access.');}
    setDriver(d);
    const {data:a,error:ae}=await supabase.from('delivery_assignments').select('id,order_id,status,assigned_at,accepted_at,started_at,delivered_at,delivery_note').eq('driver_id',session.user.id).order('assigned_at',{ascending:false}).limit(30);
    if(ae)throw ae;
@@ -29,7 +29,7 @@ export default function KanevDriverPortal({session,onSignOut}){
   }catch(e){setError(e.message||'Could not load your deliveries.');setJobs([]);}
   finally{setBusy(false);}
  },[session?.user?.id]);
- useEffect(()=>{load();const ch=supabase.channel('driver-assignments-'+session?.user?.id).on('postgres_changes',{event:'*',schema:'public',table:'delivery_assignments',filter:'driver_id=eq.'+session?.user?.id},load).subscribe();return()=>{supabase.removeChannel(ch);};},[load]);
+ useEffect(()=>{load();const ch=supabase.channel('driver-assignments-'+session?.user?.id).on('postgres_changes',{event:'*',schema:'public',table:'delivery_assignments',filter:'driver_id=eq.'+session?.user?.id},load).on('postgres_changes',{event:'*',schema:'public',table:'delivery_drivers',filter:'user_id=eq.'+session?.user?.id},load).subscribe();return()=>{supabase.removeChannel(ch);};},[load]);
  const stopTracking=async({stopBackground=false}={})=>{try{await watchRef.current?.remove?.();}catch(_){}watchRef.current=null;setTrackingId(null);if(stopBackground){await stopDriverBackgroundLocation();setBackgroundEnabled(false);}};
  const startTracking=async(job)=>{
   if(!job||!['picked_up','in_transit'].includes(job.status))return;
