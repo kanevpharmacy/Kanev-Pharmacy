@@ -1643,7 +1643,7 @@ export default function App() {
                   {isExpanded ? <View style={{marginTop:10,paddingTop:10,borderTopWidth:1,borderTopColor:'#DCE8E1'}}>
                     {o.delivery_partner ? <Text style={styles.accountRowSub}>Courier: {o.delivery_partner}</Text> : null}
                     <KanevOrderProgress status={o.status || o.delivery_status} fulfilment={o.fulfilment} />
-                    {o.fulfilment !== 'collection' && ['out_for_delivery','completed'].includes(String(o.status || o.delivery_status || '').toLowerCase()) ? <KanevLiveDeliveryMap order={o} /> : null}
+                    {o.fulfilment !== 'collection' ? <KanevLiveDeliveryMap order={o} /> : null}
                     {(orderTrackingEvents[o.id] || []).filter(ev => !/^order status changed\s/i.test(String(ev.message || '').trim())).length > 0 ? <View style={{marginTop:10,paddingLeft:10,borderLeftWidth:2,borderLeftColor:'#C8DCCF',gap:7}}>
                       {(orderTrackingEvents[o.id] || []).filter(ev => !/^order status changed\s/i.test(String(ev.message || '').trim())).slice(0,4).map(ev=><View key={ev.id}><Text style={{fontSize:11,fontWeight:'800',color:COLORS.ink}}>{ev.message}</Text><Text style={{fontSize:10,color:COLORS.muted}}>{new Date(ev.created_at).toLocaleString()}{ev.location ? ` · ${ev.location}` : ''}</Text></View>)}
                     </View> : <Text style={[styles.accountRowSub,{marginTop:8}]}>Progress updates will appear here as the pharmacy processes your order.</Text>}
