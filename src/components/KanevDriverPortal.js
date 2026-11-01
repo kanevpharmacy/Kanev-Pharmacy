@@ -17,7 +17,7 @@ export default function KanevDriverPortal({session,onSignOut}){
   setBusy(true);setError('');
   try{
    const {data:d,error:de}=await supabase.from('delivery_drivers').select('*').eq('user_id',session.user.id).maybeSingle();
-   if(de)throw de;if(!d||d.status!=='active')throw new Error('This account does not have active delivery-driver access.');
+   if(de)throw de;if(!d||d.status!=='active'){await stopDriverBackgroundLocation();throw new Error('This account does not have active delivery-driver access.');}
    setDriver(d);
    const {data:a,error:ae}=await supabase.from('delivery_assignments').select('id,order_id,status,assigned_at,accepted_at,started_at,delivered_at,delivery_note').eq('driver_id',session.user.id).order('assigned_at',{ascending:false}).limit(30);
    if(ae)throw ae;
@@ -68,7 +68,7 @@ export default function KanevDriverPortal({session,onSignOut}){
   <View style={{backgroundColor:GREEN,paddingTop:Platform.OS==='android'?34:18,paddingHorizontal:18,paddingBottom:20,borderBottomLeftRadius:22,borderBottomRightRadius:22}}>
    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
     <View><Text style={{color:'#C8F36A',fontSize:10,fontWeight:'900',letterSpacing:1}}>KANEV PHARMACY</Text><Text style={{color:'#FFFFFF',fontSize:22,fontWeight:'900',marginTop:5}}>Driver dashboard</Text><Text style={{color:'#DCEBE3',fontSize:12,marginTop:4}}>Welcome, {driver?.full_name||'Driver'}</Text></View>
-    <Pressable onPress={onSignOut} style={{padding:10,backgroundColor:'#FFFFFF20',borderRadius:12}}><Ionicons name="log-out-outline" size={21} color="#FFFFFF"/></Pressable>
+    <Pressable onPress={async()=>{await stopTracking({stopBackground:true});onSignOut?.();}} style={{padding:10,backgroundColor:'#FFFFFF20',borderRadius:12}}><Ionicons name="log-out-outline" size={21} color="#FFFFFF"/></Pressable>
    </View>
    <View style={{flexDirection:'row',gap:9,marginTop:17}}>
     <View style={{flex:1,backgroundColor:'#FFFFFF18',borderRadius:12,padding:12}}><Text style={{color:'#DCEBE3',fontSize:11}}>Active deliveries</Text><Text style={{color:'#FFFFFF',fontSize:23,fontWeight:'900'}}>{active.length}</Text></View>
