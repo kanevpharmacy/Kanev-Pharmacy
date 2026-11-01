@@ -610,9 +610,9 @@ export default function App() {
   }, [session?.user?.id]);
   const loadOrders = useCallback(async () => {
     if (!supabaseConfigured || !session?.user) { setOrders([]); return; }
-    let result = await supabase.from('orders').select('id,order_number,status,total_zmw,fulfilment,created_at,delivery_status,tracking_code,delivery_partner,delivered_at').eq('customer_id', session.user.id).order('created_at', { ascending: false }).limit(20);
+    let result = await supabase.from('orders').select('id,order_number,status,total_zmw,fulfilment,created_at,delivery_status,tracking_code,delivery_partner,delivered_at,delivery_address,delivery_latitude,delivery_longitude').eq('customer_id', session.user.id).order('created_at', { ascending: false }).limit(20);
     // Keep order history usable while a project is applying the delivery migration.
-    if (result.error && /delivery_status|tracking_code|delivery_partner|delivered_at/i.test(result.error.message || '')) {
+    if (result.error && /delivery_status|tracking_code|delivery_partner|delivered_at|delivery_address|delivery_latitude|delivery_longitude/i.test(result.error.message || '')) {
       result = await supabase.from('orders').select('id,order_number,status,total_zmw,fulfilment,created_at').eq('customer_id', session.user.id).order('created_at', { ascending: false }).limit(20);
     }
     const loadedOrders = result.data || [];
