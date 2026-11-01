@@ -558,6 +558,27 @@ export default function App() {
               console.warn('[Kanev startup] Could not load startup branding:', brandingError.message);
             }
           }).catch(error => console.warn('[Kanev startup] Branding request failed:', error?.message || error));
+        // Supabase invitation links can arrive as either a PKCE code or a
+        // token_hash/type pair. Explicitly consume invite links before reading
+        // the session so a previously signed-in storefront/admin session cannot
+        // silently win over the invited driver's account.
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search || '');
+          const hashParams = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+          const code = params.get('code');
+          const tokenHash = params.get('token_hash') || hashParams.get('token_hash');
+          const inviteType = params.get('type') || hashParams.get('type');
+          if (code) {
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) console.warn('[Kanev invite] Code exchange failed:', exchangeError.message);
+          } else if (tokenHash && inviteType === 'invite') {
+            const { error: inviteVerifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'invite' });
+            if (inviteVerifyError) console.warn('[Kanev invite] Invite verification failed:', inviteVerifyError.message);
+          }
+          if (code || tokenHash) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         const initialSession = data.session || null;
@@ -603,7 +624,11 @@ export default function App() {
     const verifyDriverAccess = async () => {
       if (!session?.user?.id || !supabaseConfigured) { if (active) setDriverAccess(false); return; }
       const { data, error } = await supabase.from('delivery_drivers').select('user_id,status').eq('user_id', session.user.id).maybeSingle();
-      if (active) setDriverAccess(!error && data?.status === 'active');
+      if (active) {
+        const isActiveDriver = !error && data?.status === 'active';
+        setDriverAccess(isActiveDriver);
+        if (isActiveDriver) setTab('Home');
+      }
     };
     verifyDriverAccess();
     return () => { active = false; };
