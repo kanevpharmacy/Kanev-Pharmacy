@@ -14,6 +14,8 @@ export default function KanevDriverPortal({session,onSignOut}){
  const trackingHeartbeatRef=useRef(null);
  const autoResumeAttemptRef=useRef(null);
  const [backgroundEnabled,setBackgroundEnabled]=useState(false);
+ const [gpsStatus,setGpsStatus]=useState('Waiting for GPS fix…');
+ const [lastGpsSent,setLastGpsSent]=useState(null);
  const load=useCallback(async()=>{
   if(!session?.user?.id)return;
   setBusy(true);setError('');
@@ -43,22 +45,23 @@ export default function KanevDriverPortal({session,onSignOut}){
    let sending=false;
    const send=async(position)=>{
     if(sending||!position?.coords)return;
-    sending=true;
+    sending=true;setGpsStatus('GPS fix received; saving location…');
     try{
      const c=position.coords;
      const {error:e}=await supabase.from('delivery_driver_locations').upsert({
       driver_id:session.user.id,assignment_id:job.id,latitude:c.latitude,longitude:c.longitude,
       heading:c.heading,speed_mps:c.speed,accuracy_m:c.accuracy,recorded_at:new Date().toISOString()
      },{onConflict:'driver_id'});
-     if(e)console.warn('Driver location update failed',e.message);
+     if(e){console.warn('Driver location update failed',e.message);setGpsStatus('Location upload failed: '+e.message);return;}
+     setLastGpsSent(new Date());setGpsStatus('Location shared successfully');
     }finally{sending=false;}
    };
-   const getAndSend=async()=>{try{const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});await send(position);}catch(e){console.warn('Driver GPS heartbeat failed',e?.message||e);}};
+   const getAndSend=async()=>{try{setGpsStatus('Requesting current GPS position…');const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});await send(position);}catch(e){console.warn('Driver GPS heartbeat failed',e?.message||e);setGpsStatus('GPS error: '+(e?.message||'Could not get current position'));}};
    await getAndSend();
    watchRef.current=await Location.watchPositionAsync({accuracy:Location.Accuracy.Balanced,timeInterval:15000,distanceInterval:0},send);
    // A 30-second heartbeat also refreshes the timestamp when the driver is stationary.
    trackingHeartbeatRef.current=setInterval(getAndSend,30000);
-  }catch(e){setError(e.message||'Could not start location sharing.');await stopTracking();}
+  }catch(e){setGpsStatus('GPS startup failed: '+(e?.message||'Unknown error'));setError(e.message||'Could not start location sharing.');await stopTracking();}
  };
  const update=async(job,status)=>{
   setBusy(true);setError('');
@@ -106,7 +109,7 @@ export default function KanevDriverPortal({session,onSignOut}){
     <Text style={{fontSize:12,color:MUTED}}>Order total: K{Number(job.order?.total_zmw||0).toFixed(2)}</Text>
     {job.status==='assigned'?<Pressable onPress={()=>update(job,'accepted')} style={{backgroundColor:GREEN,padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Accept delivery</Text></Pressable>:null}
     {job.status==='accepted'?<Pressable onPress={()=>update(job,'picked_up')} style={{backgroundColor:GREEN,padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Picked up — start route</Text></Pressable>:null}
-    {['picked_up','in_transit'].includes(job.status)?<><View style={{backgroundColor:'#EAF5EE',padding:10,borderRadius:9,flexDirection:'row',alignItems:'center',gap:7}}><Ionicons name="radio-button-on" color={GREEN}/><Text style={{color:GREEN,fontSize:12,fontWeight:'800'}}>{trackingId===job.id?(backgroundEnabled?'Background GPS tracking active':'Foreground GPS tracking active'):'Delivery in progress'}</Text></View><Pressable onPress={()=>update(job,'delivered')} style={{backgroundColor:'#176B45',padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Mark as delivered</Text></Pressable></>:null}
+    {['picked_up','in_transit'].includes(job.status)?<><View style={{backgroundColor:'#EAF5EE',padding:10,borderRadius:9,flexDirection:'row',alignItems:'center',gap:7}}><Ionicons name="radio-button-on" color={GREEN}/><Text style={{color:GREEN,fontSize:12,fontWeight:'800'}}>{trackingId===job.id?(backgroundEnabled?'Background GPS tracking active':'Foreground GPS tracking active'):'Delivery in progress'}</Text></View>{trackingId===job.id?<Text style={{fontSize:11,color:gpsStatus.includes('failed')||gpsStatus.includes('error')?'#B42318':MUTED}}>{gpsStatus}{lastGpsSent?' · Last sent '+lastGpsSent.toLocaleTimeString():''}</Text>:null}<Pressable onPress={()=>update(job,'delivered')} style={{backgroundColor:'#176B45',padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Mark as delivered</Text></Pressable></>:null}
    </View>)}
   </ScrollView>
  </View>;
