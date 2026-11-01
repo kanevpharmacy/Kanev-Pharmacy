@@ -17,6 +17,7 @@ import { supabase, supabaseConfigured } from './src/lib/supabase';
 import KanevAdminPortal from './KanevAdminPortal';
 import KanevPharmacySymbol from './assets/kanev-pharmacy-symbol.png';
 import KanevNoticeModal from './src/components/KanevNoticeModal';
+import KanevDriverPortal from './src/components/KanevDriverPortal';
 
 // Consistent image loading across web and native. Web images are lazy-loaded
 // and decoded asynchronously; native images use progressive rendering and a
@@ -219,6 +220,7 @@ export default function App() {
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueSource, setCatalogueSource] = useState(supabaseConfigured ? 'loading' : 'demo');
   const [session, setSession] = useState(null);
+  const [driverAccess, setDriverAccess] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [authMode, setAuthMode] = useState('signin');
   const [authModalVisible, setAuthModalVisible] = useState(false);
@@ -536,6 +538,16 @@ export default function App() {
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [loadCatalogue]);
 
+  useEffect(() => {
+    let active = true;
+    const verifyDriverAccess = async () => {
+      if (!session?.user?.id || !supabaseConfigured) { if (active) setDriverAccess(false); return; }
+      const { data, error } = await supabase.from('delivery_drivers').select('user_id,status').eq('user_id', session.user.id).maybeSingle();
+      if (active) setDriverAccess(!error && data?.status === 'active');
+    };
+    verifyDriverAccess();
+    return () => { active = false; };
+  }, [session?.user?.id]);
   const loadOrders = useCallback(async () => {
     if (!supabaseConfigured || !session?.user) { setOrders([]); return; }
     let result = await supabase.from('orders').select('id,order_number,status,total_zmw,fulfilment,created_at,delivery_status,tracking_code,delivery_partner,delivered_at').eq('customer_id', session.user.id).order('created_at', { ascending: false }).limit(20);
@@ -1823,6 +1835,7 @@ export default function App() {
     return <KanevAdminPortal onExit={() => { setNotice(current => ({ ...current, visible: false })); setTab('Home'); setSelectedProduct(null); }} />;
   }
 
+  if (session?.user && driverAccess) return <KanevDriverPortal session={session} onSignOut={signOut} />;
   return (
     <AppSafeAreaView style={[styles.safe, Platform.OS === 'web' && styles.webAppViewport]}>
       <ExpoStatusBar style="dark" />
