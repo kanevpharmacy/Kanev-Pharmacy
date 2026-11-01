@@ -26,9 +26,11 @@ TaskManager.defineTask(TASK, async ({ data, error }) => {
     if (!stored) return;
     const { assignmentId, driverId } = JSON.parse(stored);
     if (!assignmentId || !driverId) return;
-    const { data: assignment, error: assignmentError } = await supabase.from('delivery_assignments')
-      .select('status').eq('id', assignmentId).eq('driver_id', driverId).maybeSingle();
-    if (assignmentError || !['picked_up', 'in_transit'].includes(assignment?.status)) {
+    const [{ data: assignment, error: assignmentError }, { data: driver, error: driverError }] = await Promise.all([
+      supabase.from('delivery_assignments').select('status').eq('id', assignmentId).eq('driver_id', driverId).maybeSingle(),
+      supabase.from('delivery_drivers').select('status').eq('user_id', driverId).maybeSingle(),
+    ]);
+    if (assignmentError || driverError || driver?.status !== 'active' || !['picked_up', 'in_transit'].includes(assignment?.status)) {
       await stopDriverBackgroundLocation();
       return;
     }
