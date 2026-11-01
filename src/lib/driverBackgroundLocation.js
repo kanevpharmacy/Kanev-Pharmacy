@@ -8,8 +8,8 @@ const TASK = 'KANEV_DRIVER_BACKGROUND_LOCATION';
 const STORAGE = 'kanev-active-driver-delivery';
 const OPTIONS = {
   accuracy: Location.Accuracy.Balanced,
-  timeInterval: 10000,
-  distanceInterval: 15,
+  timeInterval: 30000,
+  distanceInterval: 0,
   pausesUpdatesAutomatically: false,
   showsBackgroundLocationIndicator: true,
   foregroundService: {
