@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { supabase } from '../lib/supabase';
@@ -9,13 +10,26 @@ const GREEN='#064E3B', INK='#172B24', MUTED='#687A72', LINE='#DCE8E1';
 const labelStatus=s=>String(s||'assigned').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 
 function DriverNavigationMap({position,destination,address}) {
- const valid=(p)=>p&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude))&&Math.abs(Number(p.latitude))<=90&&Math.abs(Number(p.longitude))<=180;
- const hasStart=valid(position),hasEnd=valid(destination);
- const start=hasStart?[Number(position.latitude),Number(position.longitude)]:[-15.4167,28.2833];
- const end=hasEnd?[Number(destination.latitude),Number(destination.longitude)]:null;
- const routeScript=hasEnd&&hasStart?'fetch("https://router.project-osrm.org/route/v1/driving/'+start[1]+','+start[0]+';'+end[1]+','+end[0]+'?overview=full&geometries=geojson").then(r=>r.json()).then(d=>{if(d.routes&&d.routes[0]){var line=L.geoJSON(d.routes[0].geometry,{style:{color:"#087F5B",weight:6,opacity:.9}}).addTo(map);map.fitBounds(line.getBounds().pad(.16));}}).catch(()=>{});':'';
- const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;margin:0;background:#edf3ef}.driver{background:#087F5B;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 8px #064e3b88}.destination{background:#D97706;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 8px #78350f66}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>var map=L.map("map").setView(['+start[0]+','+start[1]+'], '+(hasStart?15:11)+');L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);'+(hasStart?'L.marker(['+start[0]+','+start[1]+'],{icon:L.divIcon({className:"",html:"<div class=\\"driver\\"></div>",iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map).bindPopup("Your current position");':'')+(hasEnd?'L.marker(['+end[0]+','+end[1]+'],{icon:L.divIcon({className:"",html:"<div class=\\"destination\\"></div>",iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map).bindPopup("Customer destination");':'')+routeScript+'</script></body></html>';
- return <View style={{height:260,borderRadius:12,overflow:'hidden',backgroundColor:'#EDF3EF'}}>{Platform.OS==='web'?React.createElement('iframe',{title:'Route to customer',srcDoc:html,style:{width:'100%',height:'100%',border:0,display:'block'}}):<WebView originWhitelist={['*']} source={{html}} javaScriptEnabled domStorageEnabled style={{flex:1}}/>}</View>;
+ const mapRef=useRef(null);
+ const valid=p=>p&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude))&&Math.abs(Number(p.latitude))<=90&&Math.abs(Number(p.longitude))<=180;
+ const dest=valid(destination)?{latitude:Number(destination.latitude),longitude:Number(destination.longitude)}:null;
+ const initial=valid(position)?{latitude:Number(position.latitude),longitude:Number(position.longitude)}:null;
+ const html=React.useMemo(()=>{
+  const d=dest;
+  const center=d?[d.latitude,d.longitude]:[-15.4167,28.2833];
+  return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;margin:0;background:#edf3ef}.driver-icon{background:#087F5B;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 8px #064e3b88}.destination-icon{background:#D97706;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 8px #78350f66}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>var map=L.map("map",{zoomControl:true}).setView(['+center[0]+','+center[1]+'], '+(d?15:11)+');L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);var driverMarker=null,destinationMarker=null,routeLine=null,lastRouteAt=0,lastRoutePos=null;var dest='+JSON.stringify(d)+';if(dest){destinationMarker=L.marker([dest.latitude,dest.longitude],{icon:L.divIcon({className:"",html:"<div class=\\"destination-icon\\"></div>",iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map).bindPopup("Customer destination");}function updateDriver(p){if(!p||!Number.isFinite(Number(p.latitude))||!Number.isFinite(Number(p.longitude)))return;var ll=[Number(p.latitude),Number(p.longitude)];if(!driverMarker){driverMarker=L.marker(ll,{icon:L.divIcon({className:"",html:"<div class=\\"driver-icon\\"></div>",iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map).bindPopup("Your live position");map.setView(ll,16);}else{driverMarker.setLatLng(ll);map.panTo(ll,{animate:true,duration:.5});}if(dest){var now=Date.now();var moved=!lastRoutePos||map.distance(ll,lastRoutePos)>60;if((!routeLine||moved)&&now-lastRouteAt>20000){lastRouteAt=now;lastRoutePos=L.latLng(ll);fetch("https://router.project-osrm.org/route/v1/driving/"+ll[1]+","+ll[0]+";"+dest.longitude+","+dest.latitude+"?overview=full&geometries=geojson").then(r=>r.json()).then(data=>{if(data.routes&&data.routes[0]){if(routeLine)map.removeLayer(routeLine);routeLine=L.geoJSON(data.routes[0].geometry,{style:{color:"#087F5B",weight:6,opacity:.9}}).addTo(map);}}).catch(()=>{});}}}window.addEventListener("message",function(e){try{var p=typeof e.data==="string"?JSON.parse(e.data):e.data;if(p&&p.type==="driver-position")updateDriver(p.position);}catch(_){}});window.updateDriver=updateDriver;</script></body></html>';
+ },[dest?.latitude,dest?.longitude]);
+ useEffect(()=>{
+  if(!valid(position))return;
+  const message=JSON.stringify({type:'driver-position',position:{latitude:Number(position.latitude),longitude:Number(position.longitude)}});
+  if(Platform.OS==='web'){
+   try{mapRef.current?.contentWindow?.postMessage(message,'*');}catch(_){}
+  }else{
+   try{mapRef.current?.postMessage(message);}catch(_){}
+  }
+ },[position?.latitude,position?.longitude]);
+ const onMapReady=()=>{if(!initial)return;const message=JSON.stringify({type:'driver-position',position:initial});if(Platform.OS==='web'){try{mapRef.current?.contentWindow?.postMessage(message,'*');}catch(_){}}else{try{mapRef.current?.postMessage(message);}catch(_){}}};
+ return <View style={{height:260,borderRadius:12,overflow:'hidden',backgroundColor:'#EDF3EF'}}>{Platform.OS==='web'?React.createElement('iframe',{ref:mapRef,title:'Route to customer',srcDoc:html,onLoad:onMapReady,style:{width:'100%',height:'100%',border:0,display:'block'}}):<WebView ref={mapRef} originWhitelist={['*']} source={{html}} javaScriptEnabled domStorageEnabled onLoadEnd={onMapReady} style={{flex:1}}/>}</View>;
 }
 
 export default function KanevDriverPortal({session,onSignOut}){
