@@ -223,6 +223,18 @@ export default function KanevAdminPortal(){
   finally{setDriverActionBusy(false);}
  }
  useEffect(()=>{if(session?.user?.id&&role&&page==='Drivers')loadDrivers();},[session?.user?.id,role,page]);
+ useEffect(()=>{
+  if(!session?.user?.id||!role||page!=='Drivers')return undefined;
+  let active=true;
+  const refresh=()=>{if(active)loadDrivers();};
+  const channel=supabase.channel('kanev-admin-driver-live-'+session.user.id)
+   .on('postgres_changes',{event:'*',schema:'public',table:'delivery_driver_locations'},refresh)
+   .on('postgres_changes',{event:'*',schema:'public',table:'delivery_assignments'},refresh)
+   .on('postgres_changes',{event:'*',schema:'public',table:'delivery_drivers'},refresh)
+   .subscribe();
+  const poll=setInterval(refresh,15000);
+  return ()=>{active=false;clearInterval(poll);supabase.removeChannel(channel);};
+ },[session?.user?.id,role,page]);
  async function loadData(){
   if(!supabaseConfigured)return;
   setLoading(true);
