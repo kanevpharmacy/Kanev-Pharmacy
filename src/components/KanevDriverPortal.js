@@ -11,6 +11,7 @@ const labelStatus=s=>String(s||'assigned').replaceAll('_',' ').replace(/\b\w/g,c
 export default function KanevDriverPortal({session,onSignOut}){
  const [driver,setDriver]=useState(null),[jobs,setJobs]=useState([]),[busy,setBusy]=useState(false),[trackingId,setTrackingId]=useState(null),[error,setError]=useState('');
  const watchRef=useRef(null);
+ const trackingHeartbeatRef=useRef(null);
  const [backgroundEnabled,setBackgroundEnabled]=useState(false);
  const load=useCallback(async()=>{
   if(!session?.user?.id)return;
@@ -30,7 +31,7 @@ export default function KanevDriverPortal({session,onSignOut}){
   finally{setBusy(false);}
  },[session?.user?.id]);
  useEffect(()=>{load();const ch=supabase.channel('driver-assignments-'+session?.user?.id).on('postgres_changes',{event:'*',schema:'public',table:'delivery_assignments',filter:'driver_id=eq.'+session?.user?.id},load).on('postgres_changes',{event:'*',schema:'public',table:'delivery_drivers',filter:'user_id=eq.'+session?.user?.id},load).subscribe();return()=>{supabase.removeChannel(ch);};},[load]);
- const stopTracking=async({stopBackground=false}={})=>{try{await watchRef.current?.remove?.();}catch(_){}watchRef.current=null;setTrackingId(null);if(stopBackground){await stopDriverBackgroundLocation();setBackgroundEnabled(false);}};
+ const stopTracking=async({stopBackground=false}={})=>{try{await watchRef.current?.remove?.();}catch(_){}watchRef.current=null;if(trackingHeartbeatRef.current){clearInterval(trackingHeartbeatRef.current);trackingHeartbeatRef.current=null;}setTrackingId(null);if(stopBackground){await stopDriverBackgroundLocation();setBackgroundEnabled(false);}};
  const startTracking=async(job)=>{
   if(!job||!['picked_up','in_transit'].includes(job.status))return;
   try{
@@ -38,16 +39,24 @@ export default function KanevDriverPortal({session,onSignOut}){
    if(permission.status!=='granted')throw new Error('Allow location access to share your live position with the customer.');
    await stopTracking();setTrackingId(job.id);
    if(Platform.OS!=='web'){try{const enabled=await startDriverBackgroundLocation(job.id,session.user.id);setBackgroundEnabled(enabled);}catch(bgError){setBackgroundEnabled(false);setError(bgError?.message||'Background location permission not granted. Foreground tracking remains available.');}}
+   let sending=false;
    const send=async(position)=>{
-    const c=position.coords;
-    const {error:e}=await supabase.from('delivery_driver_locations').upsert({
-     driver_id:session.user.id,assignment_id:job.id,latitude:c.latitude,longitude:c.longitude,
-     heading:c.heading,speed_mps:c.speed,accuracy_m:c.accuracy,recorded_at:new Date().toISOString()
-    },{onConflict:'driver_id'});
-    if(e)console.warn('Driver location update failed',e.message);
+    if(sending||!position?.coords)return;
+    sending=true;
+    try{
+     const c=position.coords;
+     const {error:e}=await supabase.from('delivery_driver_locations').upsert({
+      driver_id:session.user.id,assignment_id:job.id,latitude:c.latitude,longitude:c.longitude,
+      heading:c.heading,speed_mps:c.speed,accuracy_m:c.accuracy,recorded_at:new Date().toISOString()
+     },{onConflict:'driver_id'});
+     if(e)console.warn('Driver location update failed',e.message);
+    }finally{sending=false;}
    };
-   const first=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});await send(first);
-   watchRef.current=await Location.watchPositionAsync({accuracy:Location.Accuracy.Balanced,timeInterval:7000,distanceInterval:10},send);
+   const getAndSend=async()=>{try{const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});await send(position);}catch(e){console.warn('Driver GPS heartbeat failed',e?.message||e);}};
+   await getAndSend();
+   watchRef.current=await Location.watchPositionAsync({accuracy:Location.Accuracy.Balanced,timeInterval:15000,distanceInterval:0},send);
+   // A 30-second heartbeat also refreshes the timestamp when the driver is stationary.
+   trackingHeartbeatRef.current=setInterval(getAndSend,30000);
   }catch(e){setError(e.message||'Could not start location sharing.');await stopTracking();}
  };
  const update=async(job,status)=>{
