@@ -130,7 +130,7 @@ function LiveDriverMap({rows=[]}) {
  const markers=pins.map(r=>({lat:Number(r.location.latitude),lng:Number(r.location.longitude),name:String(r.full_name||'Driver').replace(/[<>&"']/g,''),order:String(r.assignment?.order?.order_number||'Active delivery').replace(/[<>&"']/g,'')}));
  const markerScript=markers.map(m=>'var p=L.marker(['+m.lat+','+m.lng+']).addTo(map).bindPopup('+JSON.stringify(m.name+' · '+m.order)+');pts.push(p.getLatLng());').join('');
  const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;margin:0;background:#edf3ef}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>var map=L.map("map").setView(['+center[0]+','+center[1]+'],12);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);var pts=[];'+markerScript+'if(pts.length>1)map.fitBounds(L.latLngBounds(pts).pad(.2));</script></body></html>';
- return <View style={{height:300,borderRadius:12,overflow:'hidden',backgroundColor:BG}}><WebView originWhitelist={['*']} source={{html}} javaScriptEnabled domStorageEnabled style={{flex:1}}/></View>;
+ return <View style={{height:300,borderRadius:12,overflow:'hidden',backgroundColor:BG}}>{Platform.OS==='web'?React.createElement('iframe',{title:'Live driver locations',srcDoc:html,style:{width:'100%',height:'100%',border:0,display:'block',background:BG},allow:'geolocation'}):<WebView originWhitelist={['*']} source={{html}} javaScriptEnabled domStorageEnabled style={{flex:1}}/>}</View>;
 }
 
 export default function KanevAdminPortal(){
