@@ -197,7 +197,7 @@ function KanevLiveDeliveryMap({ order }) {
     if (!order?.id || !supabaseConfigured) return;
     setRefreshing(true); setMapError('');
     try {
-      const { data: a, error: ae } = await supabase.from('delivery_assignments').select('id,status,updated_at').eq('order_id', order.id).in('status', ['accepted','picked_up','in_transit','delivered']).maybeSingle();
+      const { data: a, error: ae } = await supabase.from('delivery_assignments').select('id,driver_id,status,updated_at').eq('order_id', order.id).in('status', ['accepted','picked_up','in_transit','delivered']).maybeSingle();
       if (ae) throw ae;
       setAssignment(a || null);
       if (a && activeStatuses.includes(a.status)) {
@@ -212,11 +212,13 @@ function KanevLiveDeliveryMap({ order }) {
     loadTracking();
     const channel = supabase.channel('customer-delivery-map-' + order.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_assignments', filter: 'order_id=eq.' + order.id }, loadTracking)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_driver_locations' }, loadTracking)
       .subscribe();
+    const locationChannel = assignment?.driver_id ? supabase.channel('customer-driver-location-' + assignment.driver_id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_driver_locations', filter: 'driver_id=eq.' + assignment.driver_id }, loadTracking)
+      .subscribe() : null;
     const timer = setInterval(loadTracking, 12000);
-    return () => { clearInterval(timer); supabase.removeChannel(channel); };
-  }, [order?.id, loadTracking]);
+    return () => { clearInterval(timer); supabase.removeChannel(channel); if(locationChannel)supabase.removeChannel(locationChannel); };
+  }, [order?.id, assignment?.driver_id, loadTracking]);
   const validDriver = driverLocation && Number.isFinite(Number(driverLocation.latitude)) && Number.isFinite(Number(driverLocation.longitude)) && Math.abs(Number(driverLocation.latitude)) <= 90 && Math.abs(Number(driverLocation.longitude)) <= 180;
   const mapLat = validDriver ? Number(driverLocation.latitude) : (hasDestination ? destinationLat : -15.4167);
   const mapLng = validDriver ? Number(driverLocation.longitude) : (hasDestination ? destinationLng : 28.2833);
