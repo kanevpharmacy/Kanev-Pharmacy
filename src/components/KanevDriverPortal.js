@@ -12,6 +12,7 @@ export default function KanevDriverPortal({session,onSignOut}){
  const [driver,setDriver]=useState(null),[jobs,setJobs]=useState([]),[busy,setBusy]=useState(false),[trackingId,setTrackingId]=useState(null),[error,setError]=useState('');
  const watchRef=useRef(null);
  const trackingHeartbeatRef=useRef(null);
+ const autoResumeAttemptRef=useRef(null);
  const [backgroundEnabled,setBackgroundEnabled]=useState(false);
  const load=useCallback(async()=>{
   if(!session?.user?.id)return;
@@ -72,6 +73,14 @@ export default function KanevDriverPortal({session,onSignOut}){
  };
  useEffect(()=>{let mounted=true;getDriverBackgroundAssignment().then(active=>{if(mounted&&active?.driverId===session?.user?.id){setBackgroundEnabled(true);setTrackingId(active.assignmentId);}}).catch(()=>{});return()=>{mounted=false;watchRef.current?.remove?.();};},[session?.user?.id]);
  const active=jobs.filter(j=>!['delivered','cancelled'].includes(j.status));
+ // Resume GPS after a driver reloads the portal during an already active delivery.
+ useEffect(()=>{
+  const job=jobs.find(j=>['picked_up','in_transit'].includes(j.status));
+  if(!job){autoResumeAttemptRef.current=null;return;}
+  if(trackingId===job.id||autoResumeAttemptRef.current===job.id)return;
+  autoResumeAttemptRef.current=job.id;
+  startTracking(job);
+ },[jobs,trackingId]);
  useEffect(()=>{if(!jobs.length)return;getDriverBackgroundAssignment().then(stored=>{if(stored && !jobs.some(j=>j.id===stored.assignmentId && ['picked_up','in_transit'].includes(j.status))){stopDriverBackgroundLocation().then(()=>{setBackgroundEnabled(false);setTrackingId(null);});}}).catch(()=>{});},[jobs]);
  return <View style={{flex:1,backgroundColor:'#F4F8F5'}}>
   <View style={{backgroundColor:GREEN,paddingTop:Platform.OS==='android'?34:18,paddingHorizontal:18,paddingBottom:20,borderBottomLeftRadius:22,borderBottomRightRadius:22}}>
