@@ -174,7 +174,7 @@ export default function KanevAdminPortal(){
   try{
    const {data,error:e}=await supabase.functions.invoke('kanev-invite-driver',{body:{full_name:driverInvite.full_name.trim(),phone:driverInvite.phone.trim(),email:driverInvite.email.trim()}});
    if(e)throw e;if(data?.error)throw new Error(data.error);
-   setDriverInvite({full_name:'',phone:'',email:''});await loadDrivers();setError('Driver invitation sent. They must use the email invitation to set their password.');
+   setDriverInvite({full_name:'',phone:'',email:''});await loadDrivers();setError(data?.message || 'Driver setup email sent. Ask the driver to check their inbox.');
   }catch(e){setError('Driver invitation failed: '+(e?.message||'Please check the Edge Function deployment and email settings.'));}
   finally{setDriverInviteBusy(false);}
  }
