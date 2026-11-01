@@ -36,7 +36,11 @@ Deno.serve(async (req) => {
   if (!fullName || fullName.length > 120) return json({ error: "Driver name is required (maximum 120 characters)" }, 400);
   if (!phone || phone.length > 40) return json({ error: "Driver phone number is required" }, 400);
 
+  // Send the invite back to the deployed Kanev app so Supabase can establish
+  // the driver's session on the same domain that handles the app login.
+  const inviteRedirectTo = Deno.env.get("DRIVER_INVITE_REDIRECT_URL") || "https://kanev-pharmacy.vercel.app/";
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: inviteRedirectTo,
     data: { full_name: fullName, kanev_account_type: "delivery_driver" },
   });
   if (inviteError || !invited.user) {
