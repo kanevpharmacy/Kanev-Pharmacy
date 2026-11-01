@@ -184,6 +184,66 @@ function KanevOrderProgress({ status, fulfilment }) {
   </View>;
 }
 
+function KanevLiveDeliveryMap({ order }) {
+  const [assignment, setAssignment] = useState(null);
+  const [driverLocation, setDriverLocation] = useState(null);
+  const [mapError, setMapError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const activeStatuses = ['accepted','picked_up','in_transit'];
+  const destinationLat = Number(order?.delivery_latitude);
+  const destinationLng = Number(order?.delivery_longitude);
+  const hasDestination = Number.isFinite(destinationLat) && Number.isFinite(destinationLng) && Math.abs(destinationLat) <= 90 && Math.abs(destinationLng) <= 180 && (destinationLat !== 0 || destinationLng !== 0);
+  const loadTracking = useCallback(async () => {
+    if (!order?.id || !supabaseConfigured) return;
+    setRefreshing(true); setMapError('');
+    try {
+      const { data: a, error: ae } = await supabase.from('delivery_assignments').select('id,status,updated_at').eq('order_id', order.id).in('status', ['accepted','picked_up','in_transit','delivered']).maybeSingle();
+      if (ae) throw ae;
+      setAssignment(a || null);
+      if (a && activeStatuses.includes(a.status)) {
+        const { data: loc, error: le } = await supabase.from('delivery_driver_locations').select('latitude,longitude,heading,accuracy_m,recorded_at').eq('assignment_id', a.id).maybeSingle();
+        if (le) throw le;
+        setDriverLocation(loc || null);
+      } else setDriverLocation(null);
+    } catch (e) { setMapError(e?.message || 'Live delivery location is temporarily unavailable.'); }
+    finally { setRefreshing(false); }
+  }, [order?.id]);
+  useEffect(() => {
+    loadTracking();
+    const channel = supabase.channel('customer-delivery-map-' + order.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_assignments', filter: 'order_id=eq.' + order.id }, loadTracking)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_driver_locations' }, loadTracking)
+      .subscribe();
+    const timer = setInterval(loadTracking, 12000);
+    return () => { clearInterval(timer); supabase.removeChannel(channel); };
+  }, [order?.id, loadTracking]);
+  const validDriver = driverLocation && Number.isFinite(Number(driverLocation.latitude)) && Number.isFinite(Number(driverLocation.longitude)) && Math.abs(Number(driverLocation.latitude)) <= 90 && Math.abs(Number(driverLocation.longitude)) <= 180;
+  const mapLat = validDriver ? Number(driverLocation.latitude) : (hasDestination ? destinationLat : -15.4167);
+  const mapLng = validDriver ? Number(driverLocation.longitude) : (hasDestination ? destinationLng : 28.2833);
+  const markers = [];
+  if (hasDestination) markers.push({ lat: destinationLat, lng: destinationLng, label: 'Delivery destination', color: '#2563EB' });
+  if (validDriver) markers.push({ lat: Number(driverLocation.latitude), lng: Number(driverLocation.longitude), label: 'Your delivery driver', color: '#15803D' });
+  const html = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;width:100%;margin:0;background:#edf3ef}.leaflet-control-attribution{font-size:9px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>(function(){var map=L.map("map",{zoomControl:true}).setView([' + mapLat + ',' + mapLng + '], ' + (markers.length > 1 ? '14' : '13') + ');L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);var pts=[];' + markers.map(m => 'var p=L.circleMarker([' + m.lat + ',' + m.lng + '],{radius:9,color:"' + m.color + '",fillColor:"' + m.color + '",fillOpacity:1,weight:3}).addTo(map).bindPopup("' + m.label + '");pts.push(p.getLatLng());').join('') + 'if(pts.length>1){map.fitBounds(L.latLngBounds(pts).pad(0.3));}})();</script></body></html>';
+  const mapNode = Platform.OS === 'web'
+    ? React.createElement('iframe', { title: 'Live delivery map', srcDoc: html, style: { width: '100%', height: 245, border: 0, borderRadius: 12 }, loading: 'lazy' })
+    : <WebView originWhitelist={['*']} source={{ html }} javaScriptEnabled domStorageEnabled style={{ height: 245, borderRadius: 12, overflow: 'hidden' }} />;
+  const active = assignment && activeStatuses.includes(assignment.status);
+  const locationAge = validDriver && driverLocation.recorded_at ? Math.max(0, Math.round((Date.now() - new Date(driverLocation.recorded_at).getTime()) / 60000)) : null;
+  return <View style={{ marginTop: 12, padding: 11, borderRadius: 13, backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: '#DCE8E1' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}><Ionicons name='navigate-circle' size={19} color='#064E3B' /><Text style={{ fontSize: 13, fontWeight: '900', color: '#172B24' }}>Delivery location</Text></View>
+      <Pressable onPress={loadTracking} style={{ padding: 5 }}><Ionicons name='refresh' size={17} color='#064E3B' /></Pressable>
+    </View>
+    {hasDestination || validDriver ? <View style={{ overflow: 'hidden', borderRadius: 10 }}>{mapNode}</View> : <View style={{ height: 100, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF1EC', borderRadius: 10, padding: 12 }}><Ionicons name='map-outline' size={25} color='#687A72' /><Text style={{ fontSize: 12, color: '#687A72', textAlign: 'center', marginTop: 5 }}>The delivery destination has no saved map coordinates yet.</Text></View>}
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 9 }}>
+      {validDriver ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><View style={{ width: 8, height: 8, borderRadius: 5, backgroundColor: '#15803D' }} /><Text style={{ fontSize: 11, color: '#365447' }}>Driver position{locationAge !== null ? ' · ' + (locationAge === 0 ? 'just now' : locationAge + ' min ago') : ''}</Text></View> : null}
+      {hasDestination ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><View style={{ width: 8, height: 8, borderRadius: 5, backgroundColor: '#2563EB' }} /><Text style={{ fontSize: 11, color: '#365447' }}>Delivery destination</Text></View> : null}
+    </View>
+    <Text style={{ fontSize: 11, color: '#687A72', marginTop: 7 }}>{active ? (validDriver ? 'The driver’s shared position refreshes automatically.' : 'Waiting for the driver to share their first GPS position.') : assignment?.status === 'delivered' ? 'This delivery has been marked as delivered.' : 'Live driver tracking will appear here once the delivery is accepted and underway.'}</Text>
+    {mapError ? <Text style={{ fontSize: 10, color: '#B42318', marginTop: 5 }}>{mapError}</Text> : null}
+  </View>;
+}
+
 export default function App() {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isDesktop = viewportWidth >= 1024;
@@ -1583,6 +1643,7 @@ export default function App() {
                   {isExpanded ? <View style={{marginTop:10,paddingTop:10,borderTopWidth:1,borderTopColor:'#DCE8E1'}}>
                     {o.delivery_partner ? <Text style={styles.accountRowSub}>Courier: {o.delivery_partner}</Text> : null}
                     <KanevOrderProgress status={o.status || o.delivery_status} fulfilment={o.fulfilment} />
+                    {o.fulfilment !== 'collection' && ['out_for_delivery','completed'].includes(String(o.status || o.delivery_status || '').toLowerCase()) ? <KanevLiveDeliveryMap order={o} /> : null}
                     {(orderTrackingEvents[o.id] || []).filter(ev => !/^order status changed\s/i.test(String(ev.message || '').trim())).length > 0 ? <View style={{marginTop:10,paddingLeft:10,borderLeftWidth:2,borderLeftColor:'#C8DCCF',gap:7}}>
                       {(orderTrackingEvents[o.id] || []).filter(ev => !/^order status changed\s/i.test(String(ev.message || '').trim())).slice(0,4).map(ev=><View key={ev.id}><Text style={{fontSize:11,fontWeight:'800',color:COLORS.ink}}>{ev.message}</Text><Text style={{fontSize:10,color:COLORS.muted}}>{new Date(ev.created_at).toLocaleString()}{ev.location ? ` · ${ev.location}` : ''}</Text></View>)}
                     </View> : <Text style={[styles.accountRowSub,{marginTop:8}]}>Progress updates will appear here as the pharmacy processes your order.</Text>}
