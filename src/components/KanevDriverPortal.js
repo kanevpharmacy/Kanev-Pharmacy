@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform }
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { supabase } from '../lib/supabase';
+import { startDriverBackgroundLocation, stopDriverBackgroundLocation, getDriverBackgroundAssignment } from '../lib/driverBackgroundLocation';
 
 const GREEN='#064E3B', INK='#172B24', MUTED='#687A72', LINE='#DCE8E1';
 const labelStatus=s=>String(s||'assigned').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
@@ -10,6 +11,7 @@ const labelStatus=s=>String(s||'assigned').replaceAll('_',' ').replace(/\b\w/g,c
 export default function KanevDriverPortal({session,onSignOut}){
  const [driver,setDriver]=useState(null),[jobs,setJobs]=useState([]),[busy,setBusy]=useState(false),[trackingId,setTrackingId]=useState(null),[error,setError]=useState('');
  const watchRef=useRef(null);
+ const [backgroundEnabled,setBackgroundEnabled]=useState(false);
  const load=useCallback(async()=>{
   if(!session?.user?.id)return;
   setBusy(true);setError('');
@@ -28,13 +30,14 @@ export default function KanevDriverPortal({session,onSignOut}){
   finally{setBusy(false);}
  },[session?.user?.id]);
  useEffect(()=>{load();const ch=supabase.channel('driver-assignments-'+session?.user?.id).on('postgres_changes',{event:'*',schema:'public',table:'delivery_assignments',filter:'driver_id=eq.'+session?.user?.id},load).subscribe();return()=>{supabase.removeChannel(ch);};},[load]);
- const stopTracking=async()=>{try{await watchRef.current?.remove?.();}catch(_){}watchRef.current=null;setTrackingId(null);};
+ const stopTracking=async({stopBackground=false}={})=>{try{await watchRef.current?.remove?.();}catch(_){}watchRef.current=null;setTrackingId(null);if(stopBackground){await stopDriverBackgroundLocation();setBackgroundEnabled(false);}};
  const startTracking=async(job)=>{
   if(!job||!['picked_up','in_transit'].includes(job.status))return;
   try{
    const permission=await Location.requestForegroundPermissionsAsync();
    if(permission.status!=='granted')throw new Error('Allow location access to share your live position with the customer.');
    await stopTracking();setTrackingId(job.id);
+   if(Platform.OS!=='web'){try{const enabled=await startDriverBackgroundLocation(job.id,session.user.id);setBackgroundEnabled(enabled);}catch(bgError){setBackgroundEnabled(false);setError(bgError?.message||'Background location permission not granted. Foreground tracking remains available.');}}
    const send=async(position)=>{
     const c=position.coords;
     const {error:e}=await supabase.from('delivery_driver_locations').upsert({
@@ -53,13 +56,14 @@ export default function KanevDriverPortal({session,onSignOut}){
    const {error:e}=await supabase.rpc('driver_update_delivery',{p_assignment_id:job.id,p_status:status,p_note:null});
    if(e)throw e;
    if(status==='picked_up'||status==='in_transit')await startTracking({...job,status});
-   if(status==='delivered')await stopTracking();
+   if(status==='delivered')await stopTracking({stopBackground:true});
    await load();
   }catch(e){setError(e.message||'Delivery status could not be updated.');}
   finally{setBusy(false);}
  };
- useEffect(()=>()=>{stopTracking();},[]);
+ useEffect(()=>{let mounted=true;getDriverBackgroundAssignment().then(active=>{if(mounted&&active?.driverId===session?.user?.id){setBackgroundEnabled(true);setTrackingId(active.assignmentId);}}).catch(()=>{});return()=>{mounted=false;watchRef.current?.remove?.();};},[session?.user?.id]);
  const active=jobs.filter(j=>!['delivered','cancelled'].includes(j.status));
+ useEffect(()=>{if(!jobs.length)return;getDriverBackgroundAssignment().then(stored=>{if(stored && !jobs.some(j=>j.id===stored.assignmentId && ['picked_up','in_transit'].includes(j.status))){stopDriverBackgroundLocation().then(()=>{setBackgroundEnabled(false);setTrackingId(null);});}}).catch(()=>{});},[jobs]);
  return <View style={{flex:1,backgroundColor:'#F4F8F5'}}>
   <View style={{backgroundColor:GREEN,paddingTop:Platform.OS==='android'?34:18,paddingHorizontal:18,paddingBottom:20,borderBottomLeftRadius:22,borderBottomRightRadius:22}}>
    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
@@ -84,7 +88,7 @@ export default function KanevDriverPortal({session,onSignOut}){
     <Text style={{fontSize:12,color:MUTED}}>Order total: K{Number(job.order?.total_zmw||0).toFixed(2)}</Text>
     {job.status==='assigned'?<Pressable onPress={()=>update(job,'accepted')} style={{backgroundColor:GREEN,padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Accept delivery</Text></Pressable>:null}
     {job.status==='accepted'?<Pressable onPress={()=>update(job,'picked_up')} style={{backgroundColor:GREEN,padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Picked up — start route</Text></Pressable>:null}
-    {['picked_up','in_transit'].includes(job.status)?<><View style={{backgroundColor:'#EAF5EE',padding:10,borderRadius:9,flexDirection:'row',alignItems:'center',gap:7}}><Ionicons name="radio-button-on" color={GREEN}/><Text style={{color:GREEN,fontSize:12,fontWeight:'800'}}>{trackingId===job.id?'Live location sharing active':'Delivery in progress'}</Text></View><Pressable onPress={()=>update(job,'delivered')} style={{backgroundColor:'#176B45',padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Mark as delivered</Text></Pressable></>:null}
+    {['picked_up','in_transit'].includes(job.status)?<><View style={{backgroundColor:'#EAF5EE',padding:10,borderRadius:9,flexDirection:'row',alignItems:'center',gap:7}}><Ionicons name="radio-button-on" color={GREEN}/><Text style={{color:GREEN,fontSize:12,fontWeight:'800'}}>{trackingId===job.id?(backgroundEnabled?'Background GPS tracking active':'Foreground GPS tracking active'):'Delivery in progress'}</Text></View><Pressable onPress={()=>update(job,'delivered')} style={{backgroundColor:'#176B45',padding:12,borderRadius:10,alignItems:'center'}}><Text style={{color:'#FFFFFF',fontWeight:'900'}}>Mark as delivered</Text></Pressable></>:null}
    </View>)}
   </ScrollView>
  </View>;
