@@ -193,19 +193,6 @@ export default function KanevAdminPortal(){
   }catch(err){setError('Live driver positions could not be loaded: '+(err?.message||'check delivery table permissions.'));}
   finally{setLiveDriversBusy(false);}
  }
- useEffect(()=>{
-  if(page!=='Drivers'||!session?.user?.id||!role)return;
-  let active=true;
-  const refresh=()=>{if(active)loadDrivers();};
-  const channel=supabase.channel('kanev-admin-driver-live-'+session.user.id)
-   .on('postgres_changes',{event:'*',schema:'public',table:'delivery_driver_locations'},refresh)
-   .on('postgres_changes',{event:'*',schema:'public',table:'delivery_assignments'},refresh)
-   .on('postgres_changes',{event:'*',schema:'public',table:'delivery_drivers'},refresh)
-   .subscribe();
-  const poll=setInterval(refresh,30000);
-  refresh();
-  return()=>{active=false;clearInterval(poll);supabase.removeChannel(channel);};
- },[page,session?.user?.id,role]);
  async function inviteDeliveryDriver(){
   if(!driverInvite.full_name.trim()||!driverInvite.phone.trim()||!driverInvite.email.trim()){setError('Enter the driver name, phone number and email address.');return;}
   setDriverInviteBusy(true);setError('');
