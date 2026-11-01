@@ -8,7 +8,12 @@
     "scheme": "kanevpharmacy",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "zm.kanevpharmacy.app"
+      "bundleIdentifier": "zm.kanevpharmacy.app",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location"
+        ]
+      }
     },
     "android": {
       "package": "zm.kanevpharmacy.app",
@@ -24,7 +29,17 @@
       "backgroundColor": "#F4F8F5"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Kanev Pharmacy to share your location while you are delivering orders, including when the app is in the background.",
+          "locationWhenInUsePermission": "Allow Kanev Pharmacy to access your location during deliveries.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ]
   }
 }
