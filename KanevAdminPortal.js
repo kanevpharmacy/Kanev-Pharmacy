@@ -124,10 +124,19 @@ function AppearancePicker({label,value,onChange,kind='color'}) {
   </View>;
 }
 
+function LiveDriverMap({rows=[]}) {
+ const pins=rows.filter(r=>r.status==='active'&&r.location&&Number.isFinite(Number(r.location.latitude))&&Number.isFinite(Number(r.location.longitude))&&Math.abs(Number(r.location.latitude))<=90&&Math.abs(Number(r.location.longitude))<=180);
+ const center=pins.length?[Number(pins[0].location.latitude),Number(pins[0].location.longitude)]:[-15.4167,28.2833];
+ const markers=pins.map(r=>({lat:Number(r.location.latitude),lng:Number(r.location.longitude),name:String(r.full_name||'Driver').replace(/[<>&"']/g,''),order:String(r.assignment?.order?.order_number||'Active delivery').replace(/[<>&"']/g,'')}));
+ const markerScript=markers.map(m=>'var p=L.marker(['+m.lat+','+m.lng+']).addTo(map).bindPopup('+JSON.stringify(m.name+' · '+m.order)+');pts.push(p.getLatLng());').join('');
+ const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;margin:0;background:#edf3ef}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>var map=L.map("map").setView(['+center[0]+','+center[1]+'],12);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);var pts=[];'+markerScript+'if(pts.length>1)map.fitBounds(L.latLngBounds(pts).pad(.2));</script></body></html>';
+ return <View style={{height:300,borderRadius:12,overflow:'hidden',backgroundColor:BG}}><WebView originWhitelist={['*']} source={{html}} javaScriptEnabled domStorageEnabled style={{flex:1}}/></View>;
+}
+
 export default function KanevAdminPortal(){
  const {width}=useWindowDimensions(); const desktop=width>=980; const [session,setSession]=useState(null); const [role,setRole]=useState(''); const [checking,setChecking]=useState(true); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [busy,setBusy]=useState(false); const [page,setPage]=useState('Overview'); const [error,setError]=useState(''); const [documentPreview,setDocumentPreview]=useState(null); const [documentPreviewLoading,setDocumentPreviewLoading]=useState(false);
  const [stats,setStats]=useState({orders:0,pending:0,products:0,customers:0,revenue:0}); const [orders,setOrders]=useState([]); const [healthDocuments,setHealthDocuments]=useState([]); const [healthDocBusyId,setHealthDocBusyId]=useState(null); const healthDocumentsLoadingRef=useRef(false);
- const [expandedHealthDocumentId,setExpandedHealthDocumentId]=useState(null); const [healthDocFeedback,setHealthDocFeedback]=useState({}); const [healthDocMessages,setHealthDocMessages]=useState({}); const [healthDocSendingId,setHealthDocSendingId]=useState(null); const [healthDocFilter,setHealthDocFilter]=useState('all'); const [healthDocTypeFilter,setHealthDocTypeFilter]=useState('all'); const [expandedAdminOrderId,setExpandedAdminOrderId]=useState(null); const [expandedOrderId,setExpandedOrderId]=useState(null); const [orderItemsById,setOrderItemsById]=useState({}); const [orderItemsLoadingId,setOrderItemsLoadingId]=useState(null); const [products,setProducts]=useState([]); const [customers,setCustomers]=useState([]); const [categories,setCategories]=useState([]); const [drivers,setDrivers]=useState([]); const [driverInvite,setDriverInvite]=useState({full_name:'',phone:'',email:''}); const [driverInviteBusy,setDriverInviteBusy]=useState(false); const [driverPromoteId,setDriverPromoteId]=useState(''); const [driverSelectedOrder,setDriverSelectedOrder]=useState(''); const [driverSelectedUser,setDriverSelectedUser]=useState(''); const [driverActionBusy,setDriverActionBusy]=useState(false); const [loading,setLoading]=useState(false); const [search,setSearch]=useState('');
+ const [expandedHealthDocumentId,setExpandedHealthDocumentId]=useState(null); const [healthDocFeedback,setHealthDocFeedback]=useState({}); const [healthDocMessages,setHealthDocMessages]=useState({}); const [healthDocSendingId,setHealthDocSendingId]=useState(null); const [healthDocFilter,setHealthDocFilter]=useState('all'); const [healthDocTypeFilter,setHealthDocTypeFilter]=useState('all'); const [expandedAdminOrderId,setExpandedAdminOrderId]=useState(null); const [expandedOrderId,setExpandedOrderId]=useState(null); const [orderItemsById,setOrderItemsById]=useState({}); const [orderItemsLoadingId,setOrderItemsLoadingId]=useState(null); const [products,setProducts]=useState([]); const [customers,setCustomers]=useState([]); const [categories,setCategories]=useState([]); const [drivers,setDrivers]=useState([]); const [driverInvite,setDriverInvite]=useState({full_name:'',phone:'',email:''}); const [driverInviteBusy,setDriverInviteBusy]=useState(false); const [driverPromoteId,setDriverPromoteId]=useState(''); const [driverSelectedOrder,setDriverSelectedOrder]=useState(''); const [driverSelectedUser,setDriverSelectedUser]=useState(''); const [driverActionBusy,setDriverActionBusy]=useState(false); const [liveDriverRows,setLiveDriverRows]=useState([]); const [liveDriversBusy,setLiveDriversBusy]=useState(false); const [loading,setLoading]=useState(false); const [search,setSearch]=useState('');
  const emptyProductForm={id:null,name:'',slug:'',summary:'',description:'',price_zmw:'',original_price_zmw:'',rating:'5.0',stock_quantity:'0',low_stock_threshold:'5',expiry_date:'',brand:'',sku:'',image_url:'',image_urls:[],category_id:'',category_ids:[],is_active:true,requires_prescription:false,scheduled_at:''};
  const [productForm,setProductForm]=useState(emptyProductForm);
  const [productImageUploading,setProductImageUploading]=useState(false); const [newCategoryName,setNewCategoryName]=useState(''); const [categoryEditId,setCategoryEditId]=useState(null); const [categoryEditName,setCategoryEditName]=useState(''); const [categoryEditActive,setCategoryEditActive]=useState(true); const [categorySaving,setCategorySaving]=useState(false); const [newCategoryImageUrl,setNewCategoryImageUrl]=useState(''); const [categoryImageBusyId,setCategoryImageBusyId]=useState(null); const [newCategoryImageBusy,setNewCategoryImageBusy]=useState(false);
@@ -165,8 +174,24 @@ export default function KanevAdminPortal(){
  useEffect(()=>{if(session?.user?.id && role) loadHealthDocuments(session.user.id);},[session?.user?.id,role]);
  async function loadDrivers(){
   const {data,error:e}=await supabase.from('delivery_drivers').select('user_id,full_name,phone,status,created_at').order('created_at',{ascending:false});
-  if(!e)setDrivers(data||[]);
-  else if(!/does not exist|schema cache/i.test(e.message||''))setError('Drivers could not be loaded: '+e.message);
+  if(e){if(!/does not exist|schema cache/i.test(e.message||''))setError('Drivers could not be loaded: '+e.message);return;}
+  const rows=data||[];setDrivers(rows);setLiveDriversBusy(true);
+  try{
+   const ids=rows.map(x=>x.user_id);
+   if(!ids.length){setLiveDriverRows([]);return;}
+   const [{data:locations,error:le},{data:assignments,error:ae}]=await Promise.all([
+    supabase.from('delivery_driver_locations').select('driver_id,assignment_id,latitude,longitude,accuracy_m,recorded_at').in('driver_id',ids),
+    supabase.from('delivery_assignments').select('id,driver_id,order_id,status,updated_at').in('driver_id',ids).in('status',['assigned','accepted','picked_up','in_transit'])
+   ]);
+   if(le)throw le;if(ae)throw ae;
+   const active=assignments||[],orderIds=[...new Set(active.map(x=>x.order_id))];
+   const {data:orderRows,error:oe}=orderIds.length?await supabase.from('orders').select('id,order_number,customer_name,customer_phone,delivery_address').in('id',orderIds):{data:[],error:null};
+   if(oe)throw oe;
+   const locationByDriver=new Map((locations||[]).map(x=>[x.driver_id,x]));
+   const orderById=new Map((orderRows||[]).map(x=>[x.id,x]));
+   setLiveDriverRows(rows.map(d=>{const job=active.find(x=>x.driver_id===d.user_id);return {...d,assignment:job?{...job,order:orderById.get(job.order_id)}:null,location:locationByDriver.get(d.user_id)||null};}));
+  }catch(err){setError('Live driver positions could not be loaded: '+(err?.message||'check delivery table permissions.'));}
+  finally{setLiveDriversBusy(false);}
  }
  async function inviteDeliveryDriver(){
   if(!driverInvite.full_name.trim()||!driverInvite.phone.trim()||!driverInvite.email.trim()){setError('Enter the driver name, phone number and email address.');return;}
@@ -954,7 +979,13 @@ if(page==='Overview')return <><View style={s.pageHead}><View><Text style={s.page
     <Btn outline onPress={async()=>{const next=d.status==='active'?'suspended':'active';const {error:e}=await supabase.from('delivery_drivers').update({status:next,updated_at:new Date().toISOString()}).eq('user_id',d.user_id);if(e)setError(e.message);else loadDrivers();}}>{d.status==='active'?'Suspend':'Reactivate'}</Btn>
    </View>):<Empty icon="car-outline" title="No drivers registered" detail="Invite a new driver or promote an existing customer account."/>}
   </View>
-  <View style={s.panel}>
+    <View style={s.panel}>
+   <View style={s.panelHead}><View style={{flex:1}}><Text style={s.panelTitle}>Live driver tracking</Text><Text style={s.muted}>Latest GPS positions for active drivers and their assigned deliveries.</Text></View><Btn outline onPress={loadDrivers} disabled={liveDriversBusy}>{liveDriversBusy?'Refreshing…':'Refresh'}</Btn></View>
+   {liveDriversBusy&&!liveDriverRows.length?<ActivityIndicator color={GREEN}/>:null}
+   {liveDriverRows.some(x=>x.location)?<LiveDriverMap rows={liveDriverRows}/>:<View style={{padding:18,backgroundColor:BG,borderRadius:12,alignItems:'center',gap:6}}><Ionicons name="navigate-circle-outline" size={28} color={MUTED}/><Text style={s.rowTitle}>No live positions yet</Text><Text style={[s.muted,{textAlign:'center'}]}>A driver’s position appears after they accept an assigned delivery, collect it and enable location sharing.</Text></View>}
+   {liveDriverRows.map(d=>{const loc=d.location;const age=loc?.recorded_at?Math.max(0,Math.round((Date.now()-new Date(loc.recorded_at).getTime())/60000)):null;return <View key={d.user_id} style={[s.listRow,{alignItems:'flex-start'}]}><View style={{width:35,height:35,borderRadius:18,backgroundColor:'#EAF5EE',alignItems:'center',justifyContent:'center'}}><Ionicons name="car-outline" color={GREEN}/></View><View style={{flex:1,gap:3}}><Text style={s.rowTitle}>{d.full_name} · {d.status}</Text><Text style={s.muted}>{d.assignment?.order?.order_number||'No active delivery'}{d.assignment?.status?' · '+d.assignment.status.replaceAll('_',' '):''}</Text><Text style={s.muted}>{d.assignment?.order?.delivery_address||'No delivery address'}</Text><Text style={{fontSize:10,color:loc&&age!==null&&age<=2?'#176B45':'#8A5A00'}}>{loc?(age===0?'GPS updated just now':'GPS updated '+age+' min ago'):'Waiting for GPS position'}</Text></View></View>;})}
+  </View>
+<View style={s.panel}>
    <Text style={s.panelTitle}>Assign a delivery</Text>
    <Text style={s.muted}>Select an active delivery order, then choose its driver.</Text>
    <Text style={s.label}>Delivery order</Text>
